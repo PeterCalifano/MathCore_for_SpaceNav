@@ -13,8 +13,8 @@ arguments
     dChbvCoeffs         (:,1) double    % {isnumeric, ismatrix}
     dDomainLB           (1,1) double    % {isscalar, isnumeric}
     dDomainUB           (1,1) double    % {isscalar, isnumeric}
-    ui32PtrToLastCoeff  (1,1) uint32    % {isscalar, isnumeric} = length(dChbvCoeffs)
-    ui32PolyMaxDeg      (1,1) uint32    % {isscalar, isnumeric} = ui32PolyDeg
+    ui32PtrToLastCoeff  (1,1) uint32    = ui32OutputSize * ui32PolyDeg% {isscalar, isnumeric} = length(dChbvCoeffs)
+    ui32PolyMaxDeg      (1,1) uint32    = ui32PolyDeg% {isscalar, isnumeric} = ui32PolyDeg
 end
 %% PROTOTYPE
 % TODO: update doc
@@ -58,8 +58,8 @@ assert(ui32PtrToLastCoeff == ui32PolyDeg * ui32OutputSize, ...
     'Number of coefficients does not match the expected size!')
 
 % Variables definition (static size)
-dChbvPolynomial     = coder.nullcopy(zeros(ui32PolyMaxDeg + 1, 1));
-dChbvInterpVector   = coder.nullcopy(zeros(ui32OutputSize, 1));
+dChbvPolynomial     = zeros(ui32PolyMaxDeg + 1, 1);
+dChbvInterpVector   = zeros(ui32OutputSize, 1);
 
 % Compute scaled evaluation point 
 dScaledPoint = coder.nullcopy(0.0);
