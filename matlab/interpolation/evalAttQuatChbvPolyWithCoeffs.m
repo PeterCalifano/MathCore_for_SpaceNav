@@ -65,11 +65,11 @@ dChbvInterpVector   = zeros(ui32OutputSize, 1);
 dScaledPoint = (2 * dEvalPoint - (dDomainLB + dDomainUB)) / (dDomainUB - dDomainLB);
 
 % Get evaluated Chebyshev polynomials at scaled point
-dChbvPolynomial(1:ui32PolyDeg) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint, ui32PolyMaxDeg);
+dChbvPolynomial(1:ui32PolyDeg+1) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint, ui32PolyMaxDeg);
 
 % Compute interpolated output value by inner product with coefficients matrix
 dChbvInterpVector(1:ui32OutputSize) = transpose( reshape(dChbvCoeffs,...
-                                         ui32PolyDeg, ui32OutputSize) ) * dChbvPolynomial(2:ui32PolyDeg);
+                                         ui32PolyDeg, ui32OutputSize) ) * dChbvPolynomial(2:ui32PolyDeg+1);
 
 % Switch sign of the interpolated value if required
 % Check if within "switch intervals
