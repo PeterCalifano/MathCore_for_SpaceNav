@@ -1,16 +1,24 @@
-function [o_dChbvCoeffs, o_dScaledInterpDomain, o_strfitStats] = fitChbvPolynomials(i_ui8PolyDeg, i_dInterpDomain, ...
-    i_dDataMatrix, i_dDomainLB, i_dDomainUB, i_bENABLE_AUTO_CHECK) %#codegen
+function [dChbvCoeffs, dScaledInterpDomain, strfitStats] = fitChbvPolynomials(ui32PolyDeg, ...
+    dInterpDomain, ...
+    dDataMatrix, ...
+    dDomainLB, ...
+    dDomainUB, ...
+    bENABLE_FIT_CHECK) %#codegen
 arguments
-    i_ui8PolyDeg         (1, 1) uint8
-    i_dInterpDomain      (:, 1) double
-    i_dDataMatrix        (:, :) 
-    i_dDomainLB          (1, 1) double
-    i_dDomainUB          (1, 1) double
-    i_bENABLE_AUTO_CHECK (1, 1) logical = true
+    ui32PolyDeg         (1, 1) uint32
+    dInterpDomain       (:, 1) double
+    dDataMatrix         (:, :) double
+    dDomainLB           (1, 1) double 
+    dDomainUB           (1, 1) double  
+    bENABLE_FIT_CHECK   (1, 1) logical = true
 end
 %% PROTOTYPE
-% [o_dChbvCoeffs, o_dScaledInterpDomain] = fitChbvPolynomials(i_ui8PolyDeg, i_dInterpDomain, ...
-%    i_dDataMatrix, i_dDomainLB, i_dDomainUB, i_bENABLE_AUTO_CHECK) %#codegen
+% [dChbvCoeffs, dScaledInterpDomain, strfitStats] = fitChbvPolynomials(ui32PolyDeg, ...
+%     dInterpDomain, ...
+%     dDataMatrix, ...
+%     dDomainLB, ...
+%     dDomainUB, ...
+%     bENABLE_FIT_CHECK) %#codegen
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % Function for fitting interpolation coefficients of Chebyshev Polynomial up to the specified degree. The
@@ -45,39 +53,39 @@ end
 %% Function code
 
 if nargin < 6
-    i_bENABLE_AUTO_CHECK = true;
+    bENABLE_FIT_CHECK = true;
 end
 
 % Check input dimensions
 % i_dDataMatrix: [L, N] where N is the number of points, L is the output vector size
-assert(size(i_dDataMatrix, 2) == length(i_dInterpDomain));
-assert(i_ui8PolyDeg > 2);
+assert(size(dDataMatrix, 2) == length(dInterpDomain));
+assert(ui32PolyDeg > 2);
 
 
-assert(length(i_dInterpDomain) >= i_ui8PolyDeg +1);
+assert(length(dInterpDomain) >= ui32PolyDeg +1);
 
 % Get size of the output vector
-ui8OutputSize = size(i_dDataMatrix, 1);
+ui8OutputSize = size(dDataMatrix, 1);
 
 % Allocate output matrix
-o_dChbvCoeffs = zeros(ui8OutputSize*(i_ui8PolyDeg), 1);
+dChbvCoeffs = zeros(ui8OutputSize*(ui32PolyDeg), 1);
 
 
 if nargin < 3
-    i_dDomainUB = max(i_dInterpDomain, [], 'all');
-    i_dDomainLB = min(i_dInterpDomain, [], 'all');
+    dDomainUB = max(dInterpDomain, [], 'all');
+    dDomainLB = min(dInterpDomain, [], 'all');
 end
 
 % Compute scaled domain
-o_dScaledInterpDomain = (2.*i_dInterpDomain - (i_dDomainUB+i_dDomainLB))./(i_dDomainUB-i_dDomainLB);
+dScaledInterpDomain = (2.*dInterpDomain - (dDomainUB+dDomainLB))./(dDomainUB-dDomainLB);
 
 % Compute regressors matrix on scaled domain
-dRegrMatrix = zeros(i_ui8PolyDeg, size(i_dDataMatrix, 2));
+dRegrMatrix = zeros(ui32PolyDeg, size(dDataMatrix, 2));
 
-for idN = 1:size(i_dDataMatrix, 2)
+for idN = 1:size(dDataMatrix, 2)
 
     % Evaluate Chebyshev polynomial at scaled point
-    tmpChbvPoly = EvalRecursiveChbv(i_ui8PolyDeg, o_dScaledInterpDomain(idN));
+    tmpChbvPoly = EvalRecursiveChbv(ui32PolyDeg, dScaledInterpDomain(idN));
     dRegrMatrix(:, idN) = tmpChbvPoly(2:end);
     
 end
@@ -86,15 +94,15 @@ end
 % Xmat = Cmat * Phi: [LxN] = [LxM]*[MxN] where M: poly degree, N: number of samples, L: output vector size
 % ith Chebyshev polynomial i=1,...N, along each column
 % jth element of ith sample has coefficients along each row of Cmat
-dChbvCoeffs_matrixT = dRegrMatrix' \ i_dDataMatrix'; % Solve the transposed problem
+dChbvCoeffs_matrixT = dRegrMatrix' \ dDataMatrix'; % Solve the transposed problem
 % Flatten matrix to 1D vector
-o_dChbvCoeffs(1:end) = dChbvCoeffs_matrixT(:);
+dChbvCoeffs(1:end) = dChbvCoeffs_matrixT(:);
 
-if i_bENABLE_AUTO_CHECK == true && not(isempty('evalChbvPolyWithCoeffs.m'))
-        [o_strfitStats] = checkFitChbvPoly(i_ui8PolyDeg, i_dInterpDomain, o_dChbvCoeffs, ...
-            i_dDataMatrix, i_dDomainLB, i_dDomainUB, false);
+if bENABLE_FIT_CHECK == true && not(isempty('evalChbvPolyWithCoeffs.m'))
+        [strfitStats] = checkFitChbvPoly(ui32PolyDeg, dInterpDomain, dChbvCoeffs, ...
+            dDataMatrix, dDomainLB, dDomainUB, false);
 else
-    o_strfitStats = struct();
+    strfitStats = struct();
 end
 
 end

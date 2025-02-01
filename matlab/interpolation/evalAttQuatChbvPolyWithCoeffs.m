@@ -1,33 +1,46 @@
-function [dChbvInterpVector] = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ui32OutputSize, ...
-    dEvalPoint, dChbvCoeffs, dswitchIntervals, dDomainLB, dDomainUB) %#codegen
+function [dChbvInterpVector] = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ...
+    ui32OutputSize, ...
+    dEvalPoint, ...
+    dChbvCoeffs, ...
+    dSwitchIntervals, ...
+    dDomainLB, ...
+    dDomainUB, ...
+    ui32PolyMaxDeg) %#codegen
 arguments
-    ui32PolyDeg         (1, 1) uint32   {isscalar, isnumeric}
-    ui32OutputSize      (1, 1) uint32   {isscalar, isnumeric}
-    dEvalPoint          (1, 1) double   {isscalar, isnumeric}
-    dChbvCoeffs         (:, 1) double
-    dswitchIntervals    (:, 2) double 
-    dDomainLB           (1, 1) double   {isscalar, isnumeric}
-    dDomainUB           (1, 1) double   {isscalar, isnumeric}
+    ui32PolyDeg         (1, 1) uint32   % {isscalar, isnumeric} % Commented for speed-up
+    ui32OutputSize      (1, 1) uint32   % {isscalar, isnumeric}
+    dEvalPoint          (1, 1) double   % {isscalar, isnumeric}
+    dChbvCoeffs         (:, 1) double   % {isnumeric, ismatrix}
+    dSwitchIntervals    (:, 2) double   % {isnumeric, ismatrix}
+    dDomainLB           (1, 1) double   % {isscalar, isnumeric}
+    dDomainUB           (1, 1) double   % {isscalar, isnumeric}
+    ui32PolyMaxDeg      (1, 1) uint32   = ui32PolyDeg % {isscalar, isnumeric} 
 end
-% TODO (PC) UPDATE IMPLEMENTATION
 %% PROTOTYPE
-% [o_dChbvInterpVector] = evalChbvPolyWithCoeffs(i_ui8PolyDeg, i_ui8OutputSize, ...
-    % i_dEvalPoint, i_dChbvCoeffs, i_dswitchIntervals, i_dDomainLB, i_dDomainUB)
+% [dChbvInterpVector] = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ...
+%     ui32OutputSize, ...
+%     dEvalPoint, ...
+%     dChbvCoeffs, ...
+%     dSwitchIntervals, ...
+%     dDomainLB, ...
+%     dDomainUB,
+%     ui32PolyMaxDeg)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % What the function does
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% i_ui8PolyDeg
-% i_ui8OutputSize
-% i_dEvalPoint
-% i_dChbvCoeffs
-% i_bIsSignSwitched
-% i_dDomainLB
-% i_dDomainUB
+% ui32PolyDeg         (1, 1) uint32   % {isscalar, isnumeric} % Commented for speed-up
+% ui32OutputSize      (1, 1) uint32   % {isscalar, isnumeric}
+% dEvalPoint          (1, 1) double   % {isscalar, isnumeric}
+% dChbvCoeffs         (:, 1) double   % {isnumeric, ismatrix}
+% dSwitchIntervals    (:, 2) double   % {isnumeric, ismatrix}
+% dDomainLB           (1, 1) double   % {isscalar, isnumeric}
+% dDomainUB           (1, 1) double   % {isscalar, isnumeric}
+% ui32PolyMaxDeg      (1, 1) uint32   = ui32PolyDeg % {isscalar, isnumeric}
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% o_dChbvInterpVector
+% dChbvInterpVector
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 07-05-2024        Pietro Califano         First version, modified from general purpose utility. Validated.
@@ -40,27 +53,29 @@ end
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
 
-assert(length(dChbvCoeffs) == ui32PolyDeg*ui32OutputSize, ...
+% ui32PtrToLastCoeff = ui32PolyDeg * ui32OutputSize;
+assert(length(dChbvCoeffs) == ui32PolyMaxDeg*ui32OutputSize, ...
     'Number of coefficients does not match output vector size.')
 
 % Variables declaration
-dChbvPolynomial = coder.nullcopy(zeros(ui32PolyDeg+1, 1));
-dChbvInterpVector = coder.nullcopy(zeros(ui32OutputSize, 1));
+dChbvPolynomial     = zeros(ui32PolyMaxDeg + 1, 1);
+dChbvInterpVector   = zeros(ui32OutputSize, 1);
 
 % Compute scaled evaluation point
-dScaledPoint = (2 * dEvalPoint - (dDomainLB+dDomainUB)) / (dDomainUB-dDomainLB);
+dScaledPoint = (2 * dEvalPoint - (dDomainLB + dDomainUB)) / (dDomainUB - dDomainLB);
+
 % Get evaluated Chebyshev polynomials at scaled point
-dChbvPolynomial(:) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint);
+dChbvPolynomial(1:ui32PolyDeg) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint, ui32PolyMaxDeg);
 
 % Compute interpolated output value by inner product with coefficients matrix
-dChbvInterpVector(:) = transpose( reshape(dChbvCoeffs,...
-    ui32PolyDeg, ui32OutputSize) ) * dChbvPolynomial(2:end);
+dChbvInterpVector(1:ui32OutputSize) = transpose( reshape(dChbvCoeffs,...
+                                         ui32PolyDeg, ui32OutputSize) ) * dChbvPolynomial(2:ui32PolyDeg);
 
 % Switch sign of the interpolated value if required
 % Check if within "switch intervals
-for idCheck = 1:size(dswitchIntervals, 1)
-    if dEvalPoint >= dswitchIntervals(idCheck, 1) && dEvalPoint < dswitchIntervals(idCheck, 2)
-        dChbvInterpVector(:) = - dChbvInterpVector(:);
+for idCheck = 1:size(dSwitchIntervals, 1) % TODO verify if this is allowed or iterable must be fixed
+    if dEvalPoint >= dSwitchIntervals(idCheck, 1) && dEvalPoint < dSwitchIntervals(idCheck, 2)
+        dChbvInterpVector(1:ui32OutputSize) = - dChbvInterpVector(1:ui32OutputSize);
     end
 end
 

@@ -1,14 +1,20 @@
-function [o_strfitStats, o_dChbvInterpVector] = checkFitChbvPoly(i_ui8PolyDeg, i_dInterpDomain, ...
-    i_dChbvCoeffs, i_dDataMatrix, i_dDomainLB, i_dDomainUB, i_bIS_ATT_QUAT, i_dswitchIntervals)
+function [strfitStats, dChbvInterpVector] = checkFitChbvPoly(ui32PolyDeg, ...
+    dInterpDomain, ...
+    dChbvCoeffs, ...
+    dDataMatrix, ...
+    dDomainLB, ...
+    dDomainUB, ...
+    bIS_ATT_QUAT, ...
+    dSwitchIntervals)
 arguments
-    i_ui8PolyDeg    (1, 1) uint8
-    i_dInterpDomain (:, 1) double
-    i_dChbvCoeffs   (:, 1) double
-    i_dDataMatrix   (:, :) double
-    i_dDomainLB     (1, 1) double
-    i_dDomainUB     (1, 1) double
-    i_bIS_ATT_QUAT  (1, 1) logical
-    i_dswitchIntervals (:, :) double = []
+    ui32PolyDeg         (1, 1) uint32
+    dInterpDomain       (:, 1) double
+    dChbvCoeffs         (:, 1) double
+    dDataMatrix         (:, :) double
+    dDomainLB           (1, 1) double
+    dDomainUB           (1, 1) double
+    bIS_ATT_QUAT        (1, 1) logical
+    dSwitchIntervals    (:, :) double = []
 end
 %% PROTOTYPE
 % [o_strfitStats] = checkFitChbvPoly(i_ui8PolyDeg, i_dInterpDomain, ...
@@ -41,43 +47,43 @@ end
 % [-]
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
-if i_bIS_ATT_QUAT == true
+if bIS_ATT_QUAT == true
     i_ui8OutputSize = 4; % HARDCODED for specialization
-    assert( size(i_dDataMatrix, 1) == i_ui8OutputSize );
+    assert( size(dDataMatrix, 1) == i_ui8OutputSize );
 else
-    i_ui8OutputSize = size(i_dDataMatrix, 1);
-    i_dswitchIntervals = [];
+    i_ui8OutputSize = size(dDataMatrix, 1);
+    dSwitchIntervals = [];
 end
 
-assert( size(i_dDataMatrix, 2) == length(i_dInterpDomain) );
+assert( size(dDataMatrix, 2) == length(dInterpDomain) );
 
 % Evaluation at test points
 Npoints = 5000;
 Npoints = Npoints - 2;
 
-testpointsIDs = sort( randi( length(i_dInterpDomain), Npoints, 1 ), 'ascend' );
+testpointsIDs = sort( randi( length(dInterpDomain), Npoints, 1 ), 'ascend' );
 
-TestPoints_Time = [i_dInterpDomain(1); i_dInterpDomain(testpointsIDs); i_dInterpDomain(end)];
-TestPoints_Labels = [i_dDataMatrix(:, 1),...
-    i_dDataMatrix(:, testpointsIDs), ...
-    i_dDataMatrix(:, end)];
+TestPoints_Time = [dInterpDomain(1); dInterpDomain(testpointsIDs); dInterpDomain(end)];
+TestPoints_Labels = [dDataMatrix(:, 1),...
+    dDataMatrix(:, testpointsIDs), ...
+    dDataMatrix(:, end)];
 
-o_dChbvInterpVector = zeros(i_ui8OutputSize, length(TestPoints_Time));
+dChbvInterpVector = zeros(i_ui8OutputSize, length(TestPoints_Time));
 
 evalRunTime = zeros(length(TestPoints_Time), 1);
 
 for idP = 1:length(TestPoints_Time)
     i_dEvalPoint = TestPoints_Time(idP);
 
-    if i_bIS_ATT_QUAT == true 
+    if bIS_ATT_QUAT == true 
         tic
-        o_dChbvInterpVector(:, idP) = evalAttQuatChbvPolyWithCoeffs(i_ui8PolyDeg, i_ui8OutputSize, ...
-            i_dEvalPoint, i_dChbvCoeffs, i_dswitchIntervals, i_dDomainLB, i_dDomainUB);
+        dChbvInterpVector(:, idP) = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, i_ui8OutputSize, ...
+            i_dEvalPoint, dChbvCoeffs, dSwitchIntervals, dDomainLB, dDomainUB);
 
     else
         tic
-        o_dChbvInterpVector(:, idP) = evalChbvPolyWithCoeffs(i_ui8PolyDeg, i_ui8OutputSize, ...
-            i_dEvalPoint, i_dChbvCoeffs, i_dDomainLB, i_dDomainUB);
+        dChbvInterpVector(:, idP) = evalChbvPolyWithCoeffs(ui32PolyDeg, i_ui8OutputSize, ...
+            i_dEvalPoint, dChbvCoeffs, dDomainLB, dDomainUB);
     end
 
     evalRunTime(idP) = toc;
@@ -85,36 +91,36 @@ end
 fprintf("\nAverage interpolant evaluation time: %4.4g [s]\n", mean(evalRunTime))
 
 % Error evaluation
-o_strfitStats = struct();
+strfitStats = struct();
 
 
-if i_bIS_ATT_QUAT
-    o_strfitStats.dAbsErrVec = abs(abs(dot(o_dChbvInterpVector, TestPoints_Labels, 1)) - 1);
+if bIS_ATT_QUAT
+    strfitStats.dAbsErrVec = abs(abs(dot(dChbvInterpVector, TestPoints_Labels, 1)) - 1);
 
-    o_strfitStats.dMaxAbsErr = max(o_strfitStats.dAbsErrVec, [], 'all');
-    o_strfitStats.dAvgAbsErr = mean(o_strfitStats.dAbsErrVec, 2);
+    strfitStats.dMaxAbsErr = max(strfitStats.dAbsErrVec, [], 'all');
+    strfitStats.dAvgAbsErr = mean(strfitStats.dAbsErrVec, 2);
 
-    fprintf('Max absolute difference of (q1-dot-q2 - 1): %4.4g [-]\n', o_strfitStats.dMaxAbsErr);
-    fprintf('Average absolute difference of (q1-dot-q2 - 1): %4.4g [-]\n', o_strfitStats.dAvgAbsErr);
+    fprintf('Max absolute difference of (q1-dot-q2 - 1): %4.4g [-]\n', strfitStats.dMaxAbsErr);
+    fprintf('Average absolute difference of (q1-dot-q2 - 1): %4.4g [-]\n', strfitStats.dAvgAbsErr);
 
 else
-    o_strfitStats.absErrVec = abs(o_dChbvInterpVector - TestPoints_Labels);
-    o_strfitStats.relErrVec = o_strfitStats.absErrVec./vecnorm(TestPoints_Labels, 2, 1);
+    strfitStats.absErrVec = abs(dChbvInterpVector - TestPoints_Labels);
+    strfitStats.relErrVec = strfitStats.absErrVec./vecnorm(TestPoints_Labels, 2, 1);
 
-    o_strfitStats.maxAbsErr = max(o_strfitStats.absErrVec, [], 'all');
-    o_strfitStats.avgAbsErr = mean(o_strfitStats.absErrVec, 2);
+    strfitStats.maxAbsErr = max(strfitStats.absErrVec, [], 'all');
+    strfitStats.avgAbsErr = mean(strfitStats.absErrVec, 2);
 
-    o_strfitStats.maxRelErr = 100*max(o_strfitStats.relErrVec, [], 'all');
-    o_strfitStats.avgRelErr = 100*mean(o_strfitStats.relErrVec, 2);
+    strfitStats.maxRelErr = 100*max(strfitStats.relErrVec, [], 'all');
+    strfitStats.avgRelErr = 100*mean(strfitStats.relErrVec, 2);
 
     % Printing
-    fprintf('Max absolute error: %4.4g [-]\n', o_strfitStats.maxAbsErr);
-    fprintf('Average absolute error: %4.4g, %4.4g, %4.4g [-]\n', o_strfitStats.avgAbsErr(1), ...
-        o_strfitStats.avgAbsErr(2), o_strfitStats.avgAbsErr(3));
+    fprintf('Max absolute error: %4.4g [-]\n', strfitStats.maxAbsErr);
+    fprintf('Average absolute error: %4.4g, %4.4g, %4.4g [-]\n', strfitStats.avgAbsErr(1), ...
+        strfitStats.avgAbsErr(2), strfitStats.avgAbsErr(3));
 
-    fprintf('\nMax relative error: %4.4g [%%]\n', o_strfitStats.maxRelErr);
-    fprintf('Average relative error: %4.4g, %4.4g, %4.4g [%%]\n', o_strfitStats.avgRelErr(1), ...
-        o_strfitStats.avgRelErr(2), o_strfitStats.avgRelErr(3));
+    fprintf('\nMax relative error: %4.4g [%%]\n', strfitStats.maxRelErr);
+    fprintf('Average relative error: %4.4g, %4.4g, %4.4g [%%]\n', strfitStats.avgRelErr(1), ...
+        strfitStats.avgRelErr(2), strfitStats.avgRelErr(3));
 end
 
 
