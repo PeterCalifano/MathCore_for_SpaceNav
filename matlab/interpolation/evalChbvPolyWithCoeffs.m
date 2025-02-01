@@ -66,10 +66,11 @@ dScaledPoint = coder.nullcopy(0.0);
 dScaledPoint(:) = (2 * dEvalPoint - (dDomainLB + dDomainUB)) / (dDomainUB - dDomainLB); % scalar
 
 % Get evaluated Chebyshev polynomials at scaled point
-dChbvPolynomial(1:ui32PolyDeg) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint, ui32PolyMaxDeg); % TODO 
+dChbvPolynomial(1:ui32PolyDeg+1) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint, ui32PolyMaxDeg); % TODO 
 
 % Compute interpolated output value by inner product with coefficients matrix
-dChbvInterpVector(1:ui32OutputSize) = transpose( reshape(dChbvCoeffs(1:ui32PtrToLastCoeff), ui32PolyDeg, ui32OutputSize) ) * dChbvPolynomial(2:ui32PolyDeg);
+dChbvInterpVector(1:ui32OutputSize) = transpose( reshape(dChbvCoeffs(1:ui32PtrToLastCoeff), ui32PolyDeg, ui32OutputSize) ) * ...
+                                                    dChbvPolynomial(2:ui32PolyDeg + 1);
 
 
 end
