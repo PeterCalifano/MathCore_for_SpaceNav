@@ -12,7 +12,8 @@ _deps
 CMakeUserPresets.json
 
 
-
+**/slprj/
+**/codegen/
 *.asv
 *.png
 /build*/
