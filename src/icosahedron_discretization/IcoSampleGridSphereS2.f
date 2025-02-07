@@ -86,20 +86,33 @@
 	implicit none
 	real vector(3), R(0:19,3,3), v(0:11,3)
 	integer resolution, i, j, n, pixel
-	character*60 f
+	character*60 filename, default_filename
 !	resolution = 1	! 0 pixels per face,  so  12 pixels in total.
 !	resolution = 2	! 4 pixels per face,  so  92 pixels in total.
 !	resolution = 3	! 12 pixels per face, so 252 pixels in total.
 !	resolution = 4	! 24 pixels per face, so 492 pixels in total.
+! ACHTUNG: max 72 characters per string! TBC
+	print *, '---- Running icosahedron discretization program ----'
+	print *, 'FORTRAN routine pixelizes the unit sphere S2.'
+	print *, 'Uniform grid using the icosahedron discretization.'
+	print *, 'Code and method by Max Tegmark, 1996.'
+
+!  TODO: take input filename and path from user, else use default 
+	default_filename = 'icosahedron_sampled_grid.dat'
+
+	if (iargc() > 0) then
+		call getarg(1, filename) ! TODO verify if ok
+	else
+		filename = default_filename
+	end if
+
 	print *,'Resolution? (1, 2, 3, ... - try say 4)'
 	read *,resolution
 	n = 2*resolution*(resolution-1)
 	n = (20*n + 12)
 	call compute_matrices(R)
 	call compute_corners(v)
-	print *,'Anche qui altro testo per provare. Bello FORTRAN lol'
-	f = 'ico_ID_map.dat'
-	open(2,file=f)
+	open(2, file=filename)
 	do i=0,n-1 ! for cycle
 
 	  call pixel2vector(i,resolution,R,v,vector)
@@ -107,7 +120,7 @@
 	  write(2,'(2i6,3f9.5)') i, pixel, (vector(j),j=1,3) ! this line writes the five columns for the pixel map
 	end do
 	close(2)
-	print *,n,' pixels saved in the file ',f
+	print *,n,' pixels saved in the file ',filename
 	return
 	end
 
@@ -133,7 +146,7 @@
 	real A(3,3), vec(3), x, y
 	integer resolution, pixel
 	integer pix, face, pixperface, ifail
-	if (resolut ion.lt.1) pause 'Resolution must exceed 0'
+	if (resolution.lt.1) pause 'Resolution must exceed 0'
 	pixperface = 2*resolution*(resolution-1)
 	call find_face(vector,R,face)
 	call getmatrix(face,R,A)
