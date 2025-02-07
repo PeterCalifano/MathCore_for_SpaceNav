@@ -86,6 +86,7 @@
 	implicit none
 	real vector(3), R(0:19,3,3), v(0:11,3)
 	integer resolution, i, j, n, pixel
+	character*60 resolution_input
 	character*60 filename, default_filename
 !	resolution = 1	! 0 pixels per face,  so  12 pixels in total.
 !	resolution = 2	! 4 pixels per face,  so  92 pixels in total.
@@ -96,20 +97,32 @@
 	print *, 'FORTRAN routine pixelizes the unit sphere S2.'
 	print *, 'Uniform grid using the icosahedron discretization.'
 	print *, 'Code and method by Max Tegmark, 1996.'
+	print *, ' '
 
 !  TODO: take input filename and path from user, else use default 
 	default_filename = 'icosahedron_sampled_grid.dat'
 
 	if (iargc() > 0) then
-		call getarg(1, filename) ! TODO verify if ok
+		call getarg(1, filename) ! get the filename from the command line if given
 	else
 		filename = default_filename
 	end if
 
-	print *,'Resolution? (1, 2, 3, ... - try say 4)'
-	read *,resolution
+	if (iargc() > 1) then
+		call getarg(2, resolution_input) ! get the resolution from the command line if given
+		read(resolution_input, *) resolution
+	else
+		print *,'Which resolution? Positive integers only.'
+		read *,resolution
+	end if 
+
+	print *,'Using specified resolution: ', resolution
+
+	! Compute number of points
 	n = 2*resolution*(resolution-1)
 	n = (20*n + 12)
+	print *,'Using number of grid points: ', n
+
 	call compute_matrices(R)
 	call compute_corners(v)
 	open(2, file=filename)
@@ -120,7 +133,7 @@
 	  write(2,'(2i6,3f9.5)') i, pixel, (vector(j),j=1,3) ! this line writes the five columns for the pixel map
 	end do
 	close(2)
-	print *,n,' pixels saved in the file ',filename
+	print *,'Output saved in file:      ',filename
 	return
 	end
 
