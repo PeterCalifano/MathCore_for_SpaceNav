@@ -1,24 +1,29 @@
-function [dTargetMatrix] = GivensEliminateRow(dTargetMatrix, ui32RowsIndices) %#codegen
+function [dTargetMatrix] = GivensEliminateRow(dTargetMatrix, ...
+                                              ui32TargetSubscript, ...
+                                              ui32AuxRowId) %#codegen
+arguments
+    dTargetMatrix       (:,:) double
+    ui32TargetSubscript (1,2) uint32    
+    ui32AuxRowId        (1,1) uint32 = ui32TargetSubscript(1) - 1; 
+end
 %% SIGNATURE
 % [dTargetMatrix] = GivensEliminateRow(dTargetMatrix, ui32RowsIndices) %#codegen
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% What the function does
+% Function performing elimination of a matrix entry identified by ui32TargetSubscript vector (row, col),
+% using Givens row-wise rotations (i.e., rotating two rows). The algorithm can be used to perform QR
+% decomposition to find R in place.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% in1 [dim] description
-% Name1                     []
-% Name2                     []
-% Name3                     []
+% dTargetMatrix       (:,:) double
+% ui32TargetSubscript (1,2) uint32 % In Golub, 2014, ith row
+% ui32AuxRowId        (1,1) uint32 = ui32TargetSubscript(1) - 1; % Default: element above target row, kth row
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% out1 [dim] description
-% Name1                     []
-% Name2                     []
-% Name3                     []
+% dTargetMatrix % Target matrix transformer in place
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% 24-02-2025    Pietro Califano     First version implemented
+% 25-02-2025    Pietro Califano     First version implemented
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
@@ -27,6 +32,8 @@ function [dTargetMatrix] = GivensEliminateRow(dTargetMatrix, ui32RowsIndices) %#
 % [-]
 % -------------------------------------------------------------------------------------------------------------
 
+assert(ui32AuxRowId ~= ui32TargetSubscript(1)) 
+assert(ui32TargetSubscript(1) > 1, 'ERROR: Givens row-wise rotations cannot be applied to eliminate the 1st row. Target must be below the 1st pivot!')
 ui32NumOfCols = size(dTargetMatrix, 2);
 
 if coder.target("MATLAB") || coder.target("MEX") 
@@ -34,18 +41,22 @@ if coder.target("MATLAB") || coder.target("MEX")
     % TODO
 end
 
+% Get (a,b) entries
+dVal1 = dTargetMatrix(ui32AuxRowId,           ui32TargetSubscript(2));
+dVal2 = dTargetMatrix(ui32TargetSubscript(1), ui32TargetSubscript(2));
+
+% Compute Givens rotation values
+[dCos, dSin] = GivensRotVals([dVal1; dVal2]);
+
+% Transform rows
 for ui32IdCol = 1:ui32NumOfCols
-
-    % Get (a,b) entries
-    dVal1 = dTargetMatrix(ui32RowsIndices(1), ui32IdCol);
-    dVal2 = dTargetMatrix(ui32RowsIndices(2), ui32IdCol);
-
-    % Compute Givens rotation values
-    [dCos, dSin] = GivensRotVals([dVal1; dVal2]);
     
+    dTmp1 = dTargetMatrix(ui32AuxRowId, ui32IdCol); 
+    dTmp2 = dTargetMatrix(ui32TargetSubscript(1), ui32IdCol);
+
     % Rotate dTargetMatrix, equivalent to Arot = G^T * A
-    dTargetMatrix(ui32RowsIndices(1), ui32IdCol) = dCos * dVal1 - dSin * dVal2;
-    dTargetMatrix(ui32RowsIndices(2), ui32IdCol) = dSin * dVal1 + dCos * dVal2;
+    dTargetMatrix(ui32AuxRowId, ui32IdCol) = dCos * dTmp1 - dSin * dTmp2;
+    dTargetMatrix(ui32TargetSubscript(1), ui32IdCol) = dSin * dTmp1 + dCos * dTmp2;
 
 end
 
