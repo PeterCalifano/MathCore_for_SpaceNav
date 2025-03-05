@@ -1,13 +1,13 @@
-function o_dInvQuatSeq = qInvert(i_dQuatSeq, i_bIS_VSRPplus) %#codegen
+function dInvQuatSeq = qInvert(dQuatSeq, bIS_VSRPplus) %#codegen
 arguments
-    i_dQuatSeq     (4, :)
-    i_bIS_VSRPplus (1,1) logical
+    dQuatSeq     (4, :)
+    bIS_VSRPplus (1,1) logical
 end
 %% PROTOTYPE
-% o_dInvQuatSeq = qInvert(i_dQuatSeq, i_bIS_VSRPplus)
+% dInvQuatSeq = qInvert(dQuatSeq, bIS_VSRPplus)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% Computes the inverse according to VSRP+ convention (right-handed). Set i_bIS_VSRPplus = false if SVRP+ 
+% Computes the inverse according to VSRP+ convention (right-handed). Set bIS_VSRPplus = false if SVRP+ 
 % convention with scalar first is being used. 
 % (SV) Scalar first, Vector last
 % (P) Passive 
@@ -19,13 +19,13 @@ end
 % Crassidis, 2014. Section 2.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% i_dQuatSeq:     [4, N] Sequence of attitude quaternion with convention 
-%                        determined by i_bConvFlag. 
-% i_bIS_VSRPplus:   [1]  Boolean flag indicating the convention of the
+% dQuatSeq:     [4, N] Sequence of attitude quaternion with convention 
+%                        determined by bConvFlag. 
+% bIS_VSRPplus:   [1]  Boolean flag indicating the convention of the
 %                       quaternion. 1: VSRPplus, 0: SVRPplus (as MATLAB)
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% o_dInvQuatSeq: [4, N] Sequence of inverted attitude quaternions
+% dInvQuatSeq: [4, N] Sequence of inverted attitude quaternions
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 25-11-2023    Pietro Califano   Function coded.
@@ -41,15 +41,15 @@ end
 %% Function code
 if nargin < 2
     % Default behaviour
-    i_bIS_VSRPplus = true;
+    bIS_VSRPplus = true;
 end
 
-assert(islogical(i_bIS_VSRPplus), 'Function expected a boolean flag as second input, but found a different dtype!')
+assert(islogical(bIS_VSRPplus), 'Function expected a boolean flag as second input, but found a different dtype!')
 
-if i_bIS_VSRPplus == true
-    o_dInvQuatSeq = [-i_dQuatSeq(1:3, :); i_dQuatSeq(4, :)];
+if bIS_VSRPplus == true
+    dInvQuatSeq = [-dQuatSeq(1:3, :); dQuatSeq(4, :)];
 else
-    o_dInvQuatSeq = [i_dQuatSeq(1, :); -i_dQuatSeq(2:4, :)];
+    dInvQuatSeq = [dQuatSeq(1, :); -dQuatSeq(2:4, :)];
 end
 
 end
