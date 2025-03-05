@@ -1,8 +1,10 @@
 function [dMarginalCov] = ShurMarginalization(dCovMatrix, ...
-                                              ui16FirstMargStateIdx) %#codegen
+                                              ui16FirstMargStateIdx, ...
+                                              ui16CovarianceSize) %#codegen
 arguments
-    dCovMatrix
-    ui16FirstMargStateIdx
+    dCovMatrix              (:,:) double
+    ui16FirstMargStateIdx   (1,1) uint16
+    ui16CovarianceSize      (1,1) uint16 = size(dCovMatrix, 1)
 end
 %% PROTOTYPE
 % [dMarginalCov] = ShurMarginalization(dCovMatrix, ui16FirstMargStateIdx) %#codegen
@@ -13,8 +15,9 @@ end
 % bottom portion of the state vector.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% dCovMatrix
-% ui16FirstMargStateIdx
+% dCovMatrix              (:,:) double
+% ui16FirstMargStateIdx   (1,1) uint15
+% ui16CovarianceSize      (1,1) uint16 = size(dCovMatrix, 1)
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
 % dMarginalCov
@@ -35,14 +38,22 @@ if coder.target('MATLAB') || coder.target('MEX')
     assert(isscalar(ui16FirstMargStateIdx));
 end
 
-% Extract prior covariance of the states to marginalize, cross-correlations and remaining states covariance
-LAMBDA22 = dCovMatrix(ui16FirstMargStateIdx:end, ui16FirstMargStateIdx:end);
-LAMBDA12 = dCovMatrix(1:ui16FirstMargStateIdx-1, ui16FirstMargStateIdx:end);
-LAMBDA11 = dCovMatrix(1:ui16FirstMargStateIdx-1, 1:ui16FirstMargStateIdx-1);
+% Extract prior covariance blocks
+dLAMBDA22 = dCovMatrix(ui16FirstMargStateIdx:end, ui16FirstMargStateIdx:end);
+dLAMBDA12 = dCovMatrix(1:ui16FirstMargStateIdx-1, ui16FirstMargStateIdx:end);
+dLAMBDA11 = dCovMatrix(1:ui16FirstMargStateIdx-1, 1:ui16FirstMargStateIdx-1);
 
-% Remove correlation terms from prior covariance to get marginalized covariance of the states
-dMarginalCov = coder.nullcopy(zeros( size(dCovMatrix, 1) - ui16FirstMargStateIdx+1) );
-dMarginalCov(:, :) = LAMBDA22 - transpose(LAMBDA12) * ( LAMBDA11\LAMBDA12 );
+% Compute stable inverse using Cholesky
+dCholLAMBDA22 = chol(dLAMBDA22, 'lower'); 
+dX = dCholLAMBDA22 \ dLAMBDA12';
+
+% Compute Schur complement
+dMarginalCov = zeros( ui16CovarianceSize, ui16CovarianceSize );
+dMarginalCov(1:ui16FirstMargStateIdx-1, 1:ui16FirstMargStateIdx-1) = dLAMBDA11 - (dX' * dX);
+
+% Compute LAMBDA22 marginal (DEVNOTE: not needed)
+% dMarginalCov( ui16FirstMargStateIdx:end, ui16FirstMargStateIdx:end ) = ...
+%             dLAMBDA22 - transpose(dLAMBDA12) * ( dLAMBDA11 \ dLAMBDA12 );
 
 
 end
