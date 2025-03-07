@@ -20,10 +20,11 @@ for ii = 1:length(dX0diff)
     dEpsVec = zeros(size(dX0diff));
     dEpsVec(ii) = dEps;
 
-    dfPlus = fcn_handle(dX0 + dEpsVec, varargin{:});
-    dfMinus = fcn_handle(dX0 - dEpsVec, varargin{:});
+    dfPlus = fcn_handle(dX0diff + dEpsVec, varargin{:});
+    dfMinus = fcn_handle(dX0diff - dEpsVec, varargin{:});
+    dDiffVec = reshape(dfPlus - dfMinus, [], 1);
 
-    dFiniteDiffJac(:, ii) = d2ndOrdFiniteDiffDenom * (dfPlus - dfMinus);
+    dFiniteDiffJac(:, ii) = d2ndOrdFiniteDiffDenom * (dDiffVec);
 end
 
 end
