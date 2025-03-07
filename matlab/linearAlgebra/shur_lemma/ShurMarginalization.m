@@ -1,4 +1,4 @@
-function [dMarginalCov] = ShurMarginalization(dCovMatrix, ...
+function [dMarginalizedCov11, dMarginalizedCov22] = ShurMarginalization(dCovMatrix, ...
                                               ui16FirstMargStateIdx, ...
                                               ui16CovarianceSize) %#codegen
 arguments
@@ -10,7 +10,7 @@ end
 % [dMarginalCov] = ShurMarginalization(dCovMatrix, ui16FirstMargStateIdx) %#codegen
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% Computation of marginal covariance matrix from a Joint PDF covariance using Shur Complement. Correlations 
+% Computation of conditional covariance matrix from a Joint PDF covariance using Shur Complement. Correlations 
 % are removed from the prior covariance of the marginalized states. The algorithm can work only on the
 % bottom portion of the state vector.
 % -------------------------------------------------------------------------------------------------------------
@@ -24,6 +24,7 @@ end
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 21-04-2024        Pietro Califano         First simple version coded.
+% 03-03-2025        Pietro Califano         Update of function to compute both conditional subblocks.
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
@@ -48,12 +49,14 @@ dCholLAMBDA22 = chol(dLAMBDA22, 'lower');
 dX = dCholLAMBDA22 \ dLAMBDA12';
 
 % Compute Schur complement
-dMarginalCov = zeros( ui16CovarianceSize, ui16CovarianceSize );
-dMarginalCov(1:ui16FirstMargStateIdx-1, 1:ui16FirstMargStateIdx-1) = dLAMBDA11 - (dX' * dX);
+dMarginalizedCov11 = zeros( ui16CovarianceSize, ui16CovarianceSize );
+dMarginalizedCov11(1:ui16FirstMargStateIdx-1, 1:ui16FirstMargStateIdx-1) = dLAMBDA11 - (dX' * dX);
 
-% Compute LAMBDA22 marginal (DEVNOTE: not needed)
-% dMarginalCov( ui16FirstMargStateIdx:end, ui16FirstMargStateIdx:end ) = ...
-%             dLAMBDA22 - transpose(dLAMBDA12) * ( dLAMBDA11 \ dLAMBDA12 );
-
+% Compute LAMBDA22 marginal
+if nargout > 1
+    dMarginalizedCov22 = zeros( ui16CovarianceSize, ui16CovarianceSize );
+    dMarginalizedCov22( ui16FirstMargStateIdx:end, ui16FirstMargStateIdx:end ) = ...
+                    dLAMBDA22 - transpose(dLAMBDA12) * ( dLAMBDA11 \ dLAMBDA12 );
+end
 
 end
