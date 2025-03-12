@@ -1,41 +1,41 @@
-function scatteredValues = uniformScatter(MinVec, MaxVec, nPoints) 
+function dScatteredValues = uniformScatter(dMinVec, dMaxVec, ui32NumPoints) %#codegen
+arguments
+    dMinVec         (:,1) double {isnumeric}
+    dMaxVec         (:,1) double {isnumeric}
+    ui32NumPoints   (1,1) uint32 {isscalar, isnumeric}
+end
 %% PROTOTYPE
-% scatteredValues = uniformScatter(MinVec, MaxVec, nPoints) 
+% dScatteredValues = uniformScatter(dMinVec, dMaxVec, ui32NumPoints) %#codegen
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % Function randomly generating uniformly distributed 1D values given lower and upper bounds of the interval
 % and the desired number of points.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% MinVec
-% MaxVec
-% nPoints
+% dMinVec         (:,1) double {isnumeric}
+% dMaxVec         (:,1) double {isnumeric}
+% ui32NumPoints   (1,1) uint32 {isscalar, isnumeric}
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% scatteredValues
+% dScatteredValues
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% 05-03-2024        Pietro Califano         First version coded (scalar values)
+% 05-03-2024        Pietro Califano     First version coded (scalar values)
+% 11-03-2025        Pietro Califano     Update of function to new coding standards     
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
 % -------------------------------------------------------------------------------------------------------------
 %% Future upgrades
-% 1) Version supporting input vectors for uniform scattering
+% [-]
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
 % Get size of inputs
-vecSpaceDim = size(MinVec, 1);
-assert(vecSpaceDim == size(MaxVec, 1), "Max and Min vectors have different dimensions")
+ui32VecSpaceDim = size(dMinVec, 1);
+assert(ui32VecSpaceDim == size(dMaxVec, 1), "Max and Min vectors have different dimensions")
 
-if vecSpaceDim == 1
-    % 1D uniform random scatter
-    randPoints = rand(nPoints, 1);
-    scatteredValues = MinVec + (randPoints * (MaxVec - MinVec));
-
-else
-    error('Only 1D vector spaces currently supported.')
-end
+dRandPoints = transpose(rand(ui32NumPoints, size(dMaxVec, 1), size(dMaxVec, 2)));
+dScatteredValues = dMinVec + (dRandPoints .* (dMaxVec - dMinVec));
 
 end
 
