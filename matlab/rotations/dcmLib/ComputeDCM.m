@@ -1,6 +1,6 @@
-function o_dRotDCM = ComputeDCM(i_ui8AxisIDseq, i_dRotAngleSeq) %#codegen
+function dRotDCM = ComputeDCM(ui8AxisIDseq, dRotAngleSeq) %#codegen
 %% PROTOTYPE
-% o_dRotDCM = ComputeDCM(i_ui8AxisIDseq, i_dRotAngleSeq)
+% dRotDCM = ComputeDCM(ui8AxisIDseq, dRotAngleSeq)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % Function computing a rotation matrix by concatenation of the selected
@@ -11,11 +11,11 @@ function o_dRotDCM = ComputeDCM(i_ui8AxisIDseq, i_dRotAngleSeq) %#codegen
 %       direction of the axis.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% i_ui8AxisIDseq: [1, N] Array sequence of axis IDs (1, 2 or 3)
-% i_dRotAngleSeq: [1, N] Array sequence of corresponding rotation angles
+% ui8AxisIDseq: [1, N] Array sequence of axis IDs (1, 2 or 3)
+% dRotAngleSeq: [1, N] Array sequence of corresponding rotation angles
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% o_dRotDCM: [3, 3] Output rotation matrix
+% dRotDCM: [3, 3] Output rotation matrix
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 27-11-2023    Pietro Califano     Function assembled from validated code.
@@ -28,39 +28,39 @@ function o_dRotDCM = ComputeDCM(i_ui8AxisIDseq, i_dRotAngleSeq) %#codegen
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
 % Get number of rotations
-Nr = length(i_dRotAngleSeq);
+Nr = length(dRotAngleSeq);
 
 % Input checks
-assert(Nr == length(i_ui8AxisIDseq), 'Input arrays length do not match.')
-assert( sum(i_ui8AxisIDseq >= 1 & i_ui8AxisIDseq <= 3) == Nr , 'Invalid axis selected. Input must be: 1, 2 or 3.');
+assert(Nr == length(ui8AxisIDseq), 'Input arrays length do not match.')
+assert( sum(ui8AxisIDseq >= 1 & ui8AxisIDseq <= 3) == Nr , 'Invalid axis selected. Input must be: 1, 2 or 3.');
 
 % Initialize DCM with first rotation (left-most)
-o_dRotDCM = SingleAxisDCM(i_ui8AxisIDseq(end), i_dRotAngleSeq(end));
+dRotDCM = SingleAxisDCM(ui8AxisIDseq(end), dRotAngleSeq(end));
 
 for idR = (Nr-1):-1:1
     % Concatenate with with next rotation matrix
-    o_dRotDCM = SingleAxisDCM(i_ui8AxisIDseq(idR), i_dRotAngleSeq(idR)) * o_dRotDCM;
+    dRotDCM = SingleAxisDCM(ui8AxisIDseq(idR), dRotAngleSeq(idR)) * dRotDCM;
 end
 
 
 %% LOCAL FUNCTIONS
-    function o_dSingleRotDCM = SingleAxisDCM(i_ui8AxisID, i_dRotAngle) %#codegen
+    function dSingleRotDCM = SingleAxisDCM(ui8AxisID, dRotAngle) %#codegen
         %% PROTOTYPE
-        % o_dSingleRotDCM = SingleAxisDCM(i_ui8AxisID, i_dRotAngle)
+        % dSingleRotDCM = SingleAxisDCM(ui8AxisID, dRotAngle)
         % -------------------------------------------------------------------------------------------------------------
         %% DESCRIPTION
         % Function computing the rotation matrix about the selected axis (1,2,3) =
-        % (X,Y,Z) of the angle i_dRotAngle in RADIANS. Zero is returned if invalid
+        % (X,Y,Z) of the angle dRotAngle in RADIANS. Zero is returned if invalid
         % axis input is selected and a warning is issued.
         % NOTE: Rotation matrix assumed Right-Hand Rule, positive clockwise in the
         %       direction of the axis.
         % -------------------------------------------------------------------------------------------------------------
         %% INPUT
-        % i_ui8AxisID: [1] Axis ID (1,2,3) = (X,Y,Z)
-        % i_dRotAngle: [1] Rotation angle in RADIANS
+        % ui8AxisID: [1] Axis ID (1,2,3) = (X,Y,Z)
+        % dRotAngle: [1] Rotation angle in RADIANS
         % -------------------------------------------------------------------------------------------------------------
         %% OUTPUT
-        % o_dSingleRotDCM: [3, 3] DCM rotating around "AxisID" of "RotAngle" [rad]
+        % dSingleRotDCM: [3, 3] DCM rotating around "AxisID" of "RotAngle" [rad]
         % -------------------------------------------------------------------------------------------------------------
         %% CHANGELOG
         % 27-11-2023    Pietro Califano     Function assembled from
@@ -70,25 +70,25 @@ end
         % [-]
         % -------------------------------------------------------------------------------------------------------------
         %% Function code
-        switch i_ui8AxisID
+        switch ui8AxisID
             case 1
                 % Axis 1: X
-                o_dSingleRotDCM = [1, 0, 0; ...
-                    0, cos(i_dRotAngle), sin(i_dRotAngle); ...
-                    0, -sin(i_dRotAngle), cos(i_dRotAngle)];
+                dSingleRotDCM = [1, 0, 0; ...
+                    0, cos(dRotAngle), sin(dRotAngle); ...
+                    0, -sin(dRotAngle), cos(dRotAngle)];
             case 2
                 % Axis 2: Y
-                o_dSingleRotDCM = [cos(i_dRotAngle), 0, -sin(i_dRotAngle);...
+                dSingleRotDCM = [cos(dRotAngle), 0, -sin(dRotAngle);...
                     0, 1, 0;...
-                    sin(i_dRotAngle), 0, cos(i_dRotAngle)];
+                    sin(dRotAngle), 0, cos(dRotAngle)];
             case 3
                 % Axis 3: Z
-                o_dSingleRotDCM = [cos(i_dRotAngle), sin(i_dRotAngle), 0;...
-                    -sin(i_dRotAngle), cos(i_dRotAngle), 0;...
+                dSingleRotDCM = [cos(dRotAngle), sin(dRotAngle), 0;...
+                    -sin(dRotAngle), cos(dRotAngle), 0;...
                     0, 0, 1];
             otherwise
                 disp('Invalid rotation axis ID. Output set to zero!')
-                o_dSingleRotDCM = zeros(3, 3);
+                dSingleRotDCM = zeros(3, 3);
         end
     end
 
