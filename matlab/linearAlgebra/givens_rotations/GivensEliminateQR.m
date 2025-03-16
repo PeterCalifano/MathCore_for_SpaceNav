@@ -1,8 +1,12 @@
 function [dTargetMatrix, dOrthogonalQ] = GivensEliminateQR(dTargetMatrix, ...
-                                                            bEliminateInPlace) %#codegen
+                                                            bEliminateInPlace, ...
+                                                            ui16ValidRowPtr,...
+                                                            ui16ValidColPtr) %#codegen
 arguments
     dTargetMatrix      
     bEliminateInPlace (1,1) logical {islogical, isscalar} = true;
+    ui16ValidRowPtr   (1,1) uint16 {isscalar, isnumeric} = size(dTargetMatrix, 1);
+    ui16ValidColPtr   (1,1) uint16 {isscalar, isnumeric} = size(dTargetMatrix, 2);
 end
 %% SIGNATURE
 % [dTargetMatrix, dOrthogonalQ] = GivensEliminateQR(dTargetMatrix, ...
@@ -40,11 +44,17 @@ dOrthogonalQ = 0;
 % NOTE: these branches are intended as separate functions, thus self-contained. The coder should generate
 % two versions according to the flag.
 if bEliminateInPlace
-    ui16NumOfCols = uint16(size(dTargetMatrix, 2));
+    ui16NumOfCols = uint16(ui16ValidColPtr);
     
     for ui16IdElimCol = uint16(1:ui16NumOfCols)
 
-        for ui16IdElimRow = uint16(size(dTargetMatrix, 1):-1:ui16IdElimCol+1)
+        if all(dTargetMatrix(:, ui16IdElimCol) == 0)
+            % ui16LastNotZero
+            % FIXME, this function does not support matrices with columns all zero. How are they handled?
+            continue;
+        end
+
+        for ui16IdElimRow = uint16(ui16ValidRowPtr:-1:ui16IdElimCol+1)
 
             % Run GivensEliminateRow
             ui16TargetSubscript = [ui16IdElimRow, ui16IdElimCol];
@@ -63,7 +73,11 @@ if bEliminateInPlace
             [dCos, dSin] = GivensRotVals([dVal1; dVal2]);
 
             % Transform rows in place
-            for ui16IdCol = 1:ui16NumOfCols
+            for ui16IdCol = 1:size(dTargetMatrix, 2)
+
+                % if(all(dTargetMatrix(:, ui16IdCol) == 0))
+                %     continue;
+                % end
 
                 dTmp1 = dTargetMatrix(ui16AuxRowId, ui16IdCol);
                 dTmp2 = dTargetMatrix(ui16TargetSubscript(1), ui16IdCol);
