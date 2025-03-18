@@ -8,9 +8,9 @@ end
 % [dRotatedVec] = Rot3dVecAboutDir(dRotDir, dVecToRotate, dRotAngle)
 % -------------------------------------------------------------------------
 %% DESCRIPTION
-% Rotation of a 3D vector dVecToRotate about a unit vector dRotDir 
-% by an angle dRotAngle, applying Rodriguez's formula.
-% NOTE: rotation is according to right-hand rule.
+% Rotation of a 3D vector dVecToRotate about a unit vector dRotDir by an angle dRotAngle, applying 
+% Rodriguez's formula. By construction, the formula works for any vector not parallel to the rotation.
+% This is because it rotates the perpendicular component. NOTE: rotation is according to right-hand rule.
 % REFERENCE:
 % [1] J. Solà,  Quaternion kinematics for the error-state Kalman filter, Nov. 2017, page 19
 % -------------------------------------------------------------------------
