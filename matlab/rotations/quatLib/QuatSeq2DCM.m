@@ -1,6 +1,6 @@
-function o_dDCM = QuatSeq2DCM(i_dQuatRot, i_bIS_VSRPplus) %#codegen
+function dDCM = QuatSeq2DCM(dQuatRot, bIS_VSRPplus) %#codegen
 %% PROTOTYPE
-% o_dDCM = QuatSeq2DCM(i_dQuatRot, i_bIS_VSRPplus) %#codegen
+% dDCM = QuatSeq2DCM(dQuatRot, bIS_VSRPplus) %#codegen
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % Function converting attitude quaternion to DCM. Convention flag set to 1
@@ -11,13 +11,13 @@ function o_dDCM = QuatSeq2DCM(i_dQuatRot, i_bIS_VSRPplus) %#codegen
 % Determination and Control, Markley, Crassidis, 2014
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% i_dQuatRot:     [4, Nseq] Input quaternion to convert to DCM. Nseq is
+% dQuatRot:     [4, Nseq] Input quaternion to convert to DCM. Nseq is
 %                              the number of quaternions in the sequence.
-% i_bIS_VSRPplus: [1] Boolean flag indicating the convention of the
+% bIS_VSRPplus: [1] Boolean flag indicating the convention of the
 %                     quaternion. 1: VSRPplus, 0: Hamilton.
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% o_dDCM: [3, 3, Nseq] Output rotation matrix sequence
+% dDCM: [3, 3, Nseq] Output rotation matrix sequence
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 16-12-2023    Pietro Califano     Coded from reference.
@@ -31,11 +31,11 @@ function o_dDCM = QuatSeq2DCM(i_dQuatRot, i_bIS_VSRPplus) %#codegen
 
 %% Function code
 % Output array initialization
-Nquats = size(i_dQuatRot, 1);
-o_dDCM = coder.nullcopy(zeros(3, 3, Nquats));
+Nquats = size(dQuatRot, 1);
+dDCM = coder.nullcopy(zeros(3, 3, Nquats));
 
 for idV = 1:Nquats
-    o_dDCM(:, :, idV) = Quat2DCM(i_dQuatRot(idV, :), i_bIS_VSRPplus);
+    dDCM(:, :, idV) = Quat2DCM(dQuatRot(idV, :), bIS_VSRPplus);
 end
 
 
