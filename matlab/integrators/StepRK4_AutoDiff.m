@@ -1,12 +1,15 @@
-function [tGrid, dynFlow2tFinal] = StepRK4_AutoDiff(fDyn, xSymState, xStateSize, tStep, tInitial, tFinal)
+function [tGrid, dynFlow2tFinal] = StepRK4_AutoDiff(objDynRHS, objSymState, dIntegrStep, dFinalTime, kwargs)
 arguments
-    fDyn (1,1) casadi.Function
-    xSymState casadi.SX
-    xStateSize (1,1) double
-    tStep (1,1) double
-    tInitial (1,1) double
-    tFinal (1,1) double
+    dTimestamp      (1,1) {mustBeA(dInitialTime, ["double", "casadi.SX"])}  = 0.0
+    objDynRHS       (1,1) {mustBeA(objDynRHS, 'casadi.Function')}
+    objSymState     (:,1) {mustBeA(objSymState, 'casadi.SX')} 
+    dIntegrStep     (1,1) double
+    dFinalTime      (1,1) {mustBeA(dFinalTime,   ["double", "casadi.SX"])}
 end 
+arguments
+    kwargs.ui32StateSize   (1,1) uint32 = size(objSymState,1);
+    kwargs.dInitialTime    (1,1) {mustBeA(kwargs.dInitialTime, ["double", "casadi.SX"])}  = 0.0
+end
 %% PROTOTYPE
 % 
 % -------------------------------------------------------------------------------------------------------------
@@ -70,23 +73,23 @@ C4 = [25.0/216.0, 0.0, 1408.8/2565.0, 2197.0/4104.0, -1.0/5.0, 0.0];
 
 
 % Get casadi dynamics function object properties
-InputVarN = fDyn.n_in;
-OutputVarOut = fDyn.n_out;
+InputVarN = objDynRHS.n_in;
+OutputVarOut = objDynRHS.n_out;
 
 % Get sizes of inputs and outputs
 InputSizes = zeros(InputVarN, 2);
 OutputSizes = zeros(OutputVarOut, 2);
 
 for idIn = 1:InputVarN
-    InputSizes(idIn, :) = fDyn.size_in(idIn);
+    InputSizes(idIn, :) = objDynRHS.size_in(idIn);
 end
 for idOut = 1:OutputVarOut
-    OutputSizes(idOut, :) = fDyn.size_out(idOut);
+    OutputSizes(idOut, :) = objDynRHS.size_out(idOut);
 end
 
 % Get names
-InputNames = fDyn.name_in;
-OutpuName = fDyn.name_out;
+InputNames = objDynRHS.name_in;
+OutpuName = objDynRHS.name_out;
 
 
 %% INTEGRATION
@@ -95,18 +98,18 @@ ui32StepNum = uint32(0);
 ui32NfEval = uint32(0);
 
 % Initialize integration variables
-xk = xSymState; 
-tk = tInitial;
-hk = tStep;
+xk = objSymState; 
+tk = dInitialTime;
+hk = dIntegrStep;
 notlastStep = true;
 
-while tk < tFinal
+while tk < dFinalTime
     % BEGIN TIME STEP
 
     % Check Step size for final time
-    if (tFinal - (tk + hk)) < 0
+    if (dFinalTime - (tk + hk)) < 0
         % Adjusts last time step if it exceeds final time
-        hk = tFinal - tk;
+        hk = dFinalTime - tk;
         notlastStep = false;
     end
 
@@ -115,27 +118,27 @@ while tk < tFinal
     tkStages = tk + A.*hk;
 
     % Stage 1 evaluation
-    fStages1 = fDyn(tkStages(1), xk);
+    fStages1 = objDynRHS(tkStages(1), xk);
     % Stage 2 evaluation
-    fStages2 = fDyn(tkStages(2) , xk...
+    fStages2 = objDynRHS(tkStages(2) , xk...
         + hk*B(2, 1)*fStages1);
     % Stage 3 evaluation
-    fStages3 = fDyn(tkStages(3) , xk...
+    fStages3 = objDynRHS(tkStages(3) , xk...
         + hk*B(3, 1)*fStages1...
         + hk*B(3, 2)*fStages2);
     % Stage 4 evaluation
-    fStages4 = fDyn(tkStages(4) , xk...
+    fStages4 = objDynRHS(tkStages(4) , xk...
         + hk*B(4, 1)*fStages1...
         + hk*B(4, 2)*fStages2...
         + hk*B(4, 3)*fStages3);
     % Stage 5 evaluation
-    fStages5 = fDyn(tkStages(5) , xk...
+    fStages5 = objDynRHS(tkStages(5) , xk...
         + hk*B(5, 1)*fStages1...
         + hk*B(5, 2)*fStages2...
         + hk*B(5, 3)*fStages3...
         + hk*B(5, 4)*fStages4);
     % Stage 6 evaluation
-    fStages6 = fDyn(tkStages(6) , xk...
+    fStages6 = objDynRHS(tkStages(6) , xk...
         + hk*B(6, 1)*fStages1...
         + hk*B(6, 2)*fStages2...
         + hk*B(6, 3)*fStages3...
@@ -147,7 +150,7 @@ while tk < tFinal
     if notlastStep
         % Pre-allocate storage for trajectory and time grid based on the
         % first hk that satisfies the tolerance (heuristic)
-        tGridTemp = zeros(ceil((tFinal - tInitial)/tStep), 1);   
+        tGridTemp = zeros(ceil((dFinalTime - dInitialTime)/dIntegrStep), 1);   
     end
 
     % Update time
@@ -156,7 +159,7 @@ while tk < tFinal
     fStages = [fStages1, fStages2, fStages3, fStages4, fStages5, fStages6];
 
     % Evaluate next state at tk+1
-    xk = RK4eval(xk, fStages, hk, C4, xStateSize);
+    xk = RK4eval(xk, fStages, hk, C4, ui32StateSize);
 
 
     % Update step counter
@@ -170,9 +173,9 @@ end
 
 % Post-process output arrays
 if ui32StepNum > 1
-    tGrid = [tInitial; tGridTemp(2:(ui32StepNum+1), 1)];
+    tGrid = [dInitialTime; tGridTemp(2:(ui32StepNum+1), 1)];
 else
-    tGrid = [tInitial, tGridTemp(end)];
+    tGrid = [dInitialTime, tGridTemp(end)];
 end
 
 % Define output
