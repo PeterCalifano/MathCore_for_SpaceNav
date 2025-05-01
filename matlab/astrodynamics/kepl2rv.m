@@ -1,45 +1,58 @@
-function xCart = kepl2rv(xKepl, mu, unit) %#codegen
+function dxCart = kepl2rv(dxKepl, dGravParam, charUnit) %#codegen
+arguments
+    dxKepl      (6,1) double {isvector, isnumeric}
+    dGravParam  (1,1) double {isscalar, isnumeric, mustBeGreaterThan(dGravParam, 0)}
+    charUnit    (1,:) string {mustBeMember(charUnit, ["rad", "deg"])} = "rad"
+end
 %% PROTOTYPE
-% xCart = kepl2rv(xKepl, mu, unit)
-% --------------------------------------------------------------------------
+% dxCart = kepl2rv(dxKepl, dGravParam, charUnit) %#codegen
+% -------------------------------------------------------------------------------------------------------------
+%% DESCRIPTION
+% General purpose Keplerian propagator in Classical Keplerian elements. It propagates the initial state over
+% the specified time grid of time intervals. The function handles all types of keplerian orbits.
+% 1) Fundamentals of Astrodynamics and Applications - D. Vallado. Section
+%    2.2, Kepler's Problem. Algorithms 3 and 4.
+% -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% xKepl = [6x1] Vector of Keplerian elements 
-%   SMA: [1] Semi Major axis of the orbit
-%   ECC: [1] Eccentricity magnitude
-%   incl: [1] Inclination of orbital plane wrt XY plane (dihedral angle)
-%   RAAN: [1] Angle between the Node Line and the X axis direction 
-%   omega: [1] Angle pinpointing eccentricity vector from Node Line
-%   TA: [1] True anomaly theta
-% unit: [string] "deg" if input angles in deg. (default: rad)
-% --------------------------------------------------------------------------
+% arguments
+%     dxKepl      (6,1) double {isvector, isnumeric}
+%     dGravParam  (1,1) double {isscalar, isnumeric, mustBeGreaterThan(dGravParam, 0)}
+%     charUnit    (1,:) string {mustBeMember(charUnit, ["rad", "deg"])} = "rad"
+% end
+% -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% xCart: [6x1] Cartesian Coordinates from Osculating elements xKepl
-% --------------------------------------------------------------------------
+% dxCart: [6, 1] State in cartesian coordinates 
+% -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% V1 coded, not tested yet: basic conversion, no check for singularities, 18/10/2021. 
-% V1 not working correctly, 22/10/2021
-% V1 debugged, now working: error in the building blocks of DCM, 23/10/2021
+% 23-10-2021    Pietro Califano     First version, Orbital Mechanics course @Polimi 2021/2022
 % 12-07-2023    Pietro Califano     Re-worked and validated
-% --------------------------------------------------------------------------
-
+% 01-05-2025    Pietro Califano     Refactoring and improvements
+% -------------------------------------------------------------------------------------------------------------
+%% DEPENDENCIES
+% [-]
+% -------------------------------------------------------------------------------------------------------------
+%% Future upgrades
+% [-]
+% -------------------------------------------------------------------------------------------------------------
+%% Function code
 
 %% Input pre-processing
-SMA = xKepl(1);
-ECC = xKepl(2);
-incl = xKepl(3);
-RAAN = xKepl(4);
-omega = xKepl(5);
-TA = xKepl(6);
+dSMA    = dxKepl(1);
+dEcc    = dxKepl(2);
+dIncl   = dxKepl(3);
+dRAAN   = dxKepl(4);
+domega  = dxKepl(5);
+dTA     = dxKepl(6);
 
-if nargin < 3
-    unit = 'rad';
+if charUnit == "deg"
+    dTA     = deg2rad(dTA);
+    dIncl   = deg2rad(dIncl);
+    dRAAN   = deg2rad(dRAAN);
+    domega  = deg2rad(domega);
 end
 
-if unit == "deg"
-    TA = deg2rad(TA);
-    incl = deg2rad(incl);
-    RAAN = deg2rad(RAAN);
-    omega = deg2rad(omega);
+if dEcc > 1
+    assert( dSMA < 0, 'MATLAB:assertion:failed', 'For hyperbolic orbits (dEcc > 1), semi-major axis a must be negative.');
 end
 
 %% Conversion [SMA, ECCTA] --> (R, V) in perifocal frame
@@ -49,13 +62,16 @@ end
 % From the first two, h can be computed. Then, r and v in perifocal coords.
 % NOTE: the third components is 0 by definition.
 
+% Compute parameter p = a*(1 - e^2) (always >0 for bound or unbound)
+dSemiLatusRectum = dSMA*(1 - dEcc^2);
+
 % Norm of the specific orbital ang. mom.
-h_norm = sqrt(mu*SMA*(1 - ECC^2)); 
+dOrbitAngMomentNorm = sqrt(dGravParam * dSemiLatusRectum); 
 
-r_norm = (h_norm.^2/mu) .* (1/(1 + ECC.*cos(TA)));
+dPositionNorm = (dOrbitAngMomentNorm.^2/dGravParam) .* (1/(1 + dEcc.*cos(dTA)));
 
-r_perifocal = r_norm .* [cos(TA); sin(TA); 0]; % 3x1
-v_perifocal = [-(mu./h_norm).*sin(TA); (mu./h_norm ).*(ECC + cos(TA)); 0]; % 3x1
+dPositionPerifocal = dPositionNorm .* [cos(dTA); sin(dTA); 0]; % 3x1
+dVelocityPerifocal = [-(dGravParam./dOrbitAngMomentNorm).*sin(dTA); (dGravParam./dOrbitAngMomentNorm ).*(dEcc + cos(dTA)); 0]; % 3x1
 
 %% DCM Perifocal (e, p, h) --> Cartesian Inertial (I, J, K)
 % Having r and v in perifocal and the Euler angles (313 seq) that defines the orbital 
@@ -63,79 +79,32 @@ v_perifocal = [-(mu./h_norm).*sin(TA); (mu./h_norm ).*(ECC + cos(TA)); 0]; % 3x1
 % corresponding DCM (ZXZ). Inclination rotation matches the XY plane.
 
 % Order of rotation: 1st RAAN, 2nd inclination, 3rd omega
-ECEI2perifocal = Rot3(omega, "rad") * Rot1(incl, "rad") * Rot3(RAAN, "rad");
+dECEI2perifocal = Rot3(domega, "rad") * Rot1(dIncl, "rad") * Rot3(dRAAN, "rad");
 
-xCart = zeros(6, 1);
-xCart(1:3) = ECEI2perifocal' * r_perifocal; 
-xCart(4:6) = ECEI2perifocal' * v_perifocal;
+dxCart = zeros(6, 1);
+dxCart(1:3) = dECEI2perifocal' * dPositionPerifocal; 
+dxCart(4:6) = dECEI2perifocal' * dVelocityPerifocal;
 
 %% LOCAL functions
-function [Rot_Mat1] = Rot1(rot_angle, unit)
+%%% Rotation about 1st axis
+    function [Rot_Mat1] = Rot1(dRotAngle, charUnit)
+        if charUnit == "rad"
 
-%% PROTOTYPE
-% [Rot_Mat1] = Rot1(rot_angle)
-% ----------------------------------------------------------------------------------------
-%% DESCRIPTION
-% The following code build the matrix representing a rotation of given angle around axis 1 
-% ----------------------------------------------------------------------------------------
-%% INPUT
-% rot_angle: [scalar] angle of rotation in rad or deg
-% unit: [string] string to specify the unit of measure of the angle: can be
-%        rad or deg. DEFAULT: rad.
-% ----------------------------------------------------------------------------------------
-%% OUTPUT
-% Rot_mat1 : [3x3] rotation matrix
-% ----------------------------------------------------------------------------------------
-%% CHANGELOG
-% V1 coded: complete, 21/10/2021
-% ----------------------------------------------------------------------------------------
-%% CONTRIBUTORS
-% Pietro Califano
+            Rot_Mat1 = [1, 0, 0; ...
+                0, cos(dRotAngle), sin(dRotAngle); ...
+                0, -sin(dRotAngle), cos(dRotAngle)];
 
-if nargin == 1
-    unit = "rad";
-end
+        elseif charUnit == "deg"
 
-if unit == "rad"
-
-    Rot_Mat1 = [1, 0, 0; ...
-        0, cos(rot_angle), sin(rot_angle); ...
-        0, -sin(rot_angle), cos(rot_angle)];
-
-elseif unit == "deg"
-
-    Rot_Mat1 = [1, 0, 0; ...
-        0, cosd(rot_angle), sind(rot_angle); ...
-        0, -sind(rot_angle), cosd(rot_angle)];
-end
-
-end
-
-    function [Rot_Mat3] = Rot3(rot_angle, unit)
-
-        %% PROTOTYPE
-        % [Rot_Mat3] = Rot3(rot_angle)
-        % ----------------------------------------------------------------------------------------
-        %% DESCRIPTION
-        % The following code build the matrix representing a rotation of given angle around axis 3
-        % ----------------------------------------------------------------------------------------
-        %% INPUT
-        % rot_angle: [scalar] angle of rotation in rad or deg
-        % unit: [string] string to specify the unit of measure of the angle: can be
-        %        rad or deg. DEFAULT: rad.
-        % ----------------------------------------------------------------------------------------
-        %% OUTPUT
-        % Rot_mat3: [3x3] rotation matrix
-        % ----------------------------------------------------------------------------------------
-        %% CHANGELOG
-        % V1 coded: complete, 21/10/2021
-        % ----------------------------------------------------------------------------------------
-        %% CONTRIBUTORS
-        % Pietro Califano
-
-        if nargin == 1
-            unit = "rad";
+            Rot_Mat1 = [1, 0, 0; ...
+                0, cosd(dRotAngle), sind(dRotAngle); ...
+                0, -sind(dRotAngle), cosd(dRotAngle)];
         end
+
+    end
+
+%%% Rotation about 3rd axis
+    function [Rot_Mat3] = Rot3(rot_angle, unit)
 
         if unit == "rad"
 
