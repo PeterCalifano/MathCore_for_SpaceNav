@@ -1,4 +1,4 @@
-function [xState, evalcounter, starter_fk] = RK4(RHS, tspan, state0) %#codegen
+function [xState, evalcounter, starter_fk] = PropagateRK4(RHS, tspan, state0) %#codegen
 %% PROTOTYPE
 % [state, evalcounter, starter_fk] = RK4(RHS, tspan, state0)
 % -------------------------------------------------------------------------------------------------------------

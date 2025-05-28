@@ -1,4 +1,4 @@
-function [tGrid, xState, info] = RKF45symCompatible(fDyn, x0, h0, t0, tf, order)
+function [tGrid, xState, info] = PropagateRKF45symCompatible(fDyn, x0, h0, t0, tf, order)
 %% PROTOTYPE
 % [tGrid, xState, info] = RK45(fDyn, x0, h0, t0, tf, order)
 % -------------------------------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-function [xState, evalcounter, starter_fk] = RK2Heun(RHS, tspan, x0)
+function [xState, evalcounter, starter_fk] = PropagateRK2Heun(RHS, tspan, x0)
 %% PROTOTYPE
 % [xState, evalcounter, starter_fk] = RK2Heun(RHS, tspan, state0)
 % -------------------------------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-function [tGrid, xState, info] = RKF45(fDyn, x0, h0, t0, tf, tol) %#codegen
+function [tGrid, xState, info] = PropagateRKF45v2(fDyn, x0, h0, t0, tf, tol) %#codegen
 %% PROTOTYPE
 % [tGrid, xState, info] = RKF45(fDyn, x0, h0, t0, tf, tol)
 % -------------------------------------------------------------------------------------------------------------
@@ -13,8 +13,10 @@ function [tGrid, xState, info] = RKF45(fDyn, x0, h0, t0, tf, tol) %#codegen
 % 2)
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
+% fDyn, x0, h0, t0, tf, tol
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
+% tGrid, xState, info
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 30-07-2023    Pietro Califano     Coefficients hardcoded for RK45
@@ -25,8 +27,10 @@ function [tGrid, xState, info] = RKF45(fDyn, x0, h0, t0, tf, tol) %#codegen
 %                                   First release version.
 % 08-08-2023    Pietro Califano     Upgrade of RK5 eval with more clever
 %                                   initialization of variables.
-% 04-09-2023    Pietro Califano     Improved accuracy and debug. Speed
-%                                   performance worsened.
+% 04-09-2023    Pietro Califano     Modified to make operational flow more
+%                                   similar to reference implementation.
+%                                   Accuracy is comparable to ode45, but
+%                                   speed is much lower.
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
@@ -84,107 +88,136 @@ xk = x0;
 tk = t0;
 hk = h0;
 notlastStep = true;
+deltaStep = 1;
 
 odetimer = tic;
 while tk < tf
     % BEGIN TIME STEP
-    
+
     % Check Step size for final time
-    if (tf - (tk + hk)) < 0
+    if (tf - (tk + deltaStep*hk)) < 0
         % Adjusts last time step if it exceeds final time
         hk = tf - tk;
+        deltaStep = 1;
         notlastStep = false;
     end
 
     %% STAGES EVALUATION
     % Assign evaluation times of current timestep
-    tkStages = tk + A.*hk;
+    tkStages = tk + A.*deltaStep*hk;
 
     % Stage 1 evaluation
     fStages(:, 1) = fDyn(tkStages(1), xk);
     % Stage 2 evaluation
     fStages(:, 2) = fDyn(tkStages(2) , xk...
-        + hk*B(2, 1)*fStages(:, 1));
+        + deltaStep*hk*B(2, 1)*fStages(:, 1));
     % Stage 3 evaluation
     fStages(:, 3) = fDyn(tkStages(3) , xk...
-        + hk*B(3, 1)*fStages(:, 1)...
-        + hk*B(3, 2)*fStages(:, 2));
+        + deltaStep*hk*B(3, 1)*fStages(:, 1)...
+        + deltaStep*hk*B(3, 2)*fStages(:, 2));
     % Stage 4 evaluation
     fStages(:, 4) = fDyn(tkStages(4) , xk...
-        + hk*B(4, 1)*fStages(:, 1)...
-        + hk*B(4, 2)*fStages(:, 2)...
-        + hk*B(4, 3)*fStages(:, 3));
+        + deltaStep*hk*B(4, 1)*fStages(:, 1)...
+        + deltaStep*hk*B(4, 2)*fStages(:, 2)...
+        + deltaStep*hk*B(4, 3)*fStages(:, 3));
     % Stage 5 evaluation
     fStages(:, 5) = fDyn(tkStages(5) , xk...
-        + hk*B(5, 1)*fStages(:, 1)...
-        + hk*B(5, 2)*fStages(:, 2)...
-        + hk*B(5, 3)*fStages(:, 3)...
-        + hk*B(5, 4)*fStages(:, 4));
+        + deltaStep*hk*B(5, 1)*fStages(:, 1)...
+        + deltaStep*hk*B(5, 2)*fStages(:, 2)...
+        + deltaStep*hk*B(5, 3)*fStages(:, 3)...
+        + deltaStep*hk*B(5, 4)*fStages(:, 4));
     % Stage 6 evaluation
     fStages(:, 6) = fDyn(tkStages(6) , xk...
-        + hk*B(6, 1)*fStages(:, 1)...
-        + hk*B(6, 2)*fStages(:, 2)...
-        + hk*B(6, 3)*fStages(:, 3)...
-        + hk*B(6, 4)*fStages(:, 4)...
-        + hk*B(6, 5)*fStages(:, 5));
+        + deltaStep*hk*B(6, 1)*fStages(:, 1)...
+        + deltaStep*hk*B(6, 2)*fStages(:, 2)...
+        + deltaStep*hk*B(6, 3)*fStages(:, 3)...
+        + deltaStep*hk*B(6, 4)*fStages(:, 4)...
+        + deltaStep*hk*B(6, 5)*fStages(:, 5));
 
     NfEval = NfEval + 6;
 
-    %% ERROR EVALUATION
+    % Evaluate solution with current step (delta * hk)
+    xkErrEval = RK5eval(xk, fStages, deltaStep * hk, C5);
 
+    %% ERROR EVALUATION
     % Compute error
     fERR = zeros(Ndim, 1);
     for iE = 1:6
         fERR = fERR + DeltaC(iE) * fStages(:, iE);
     end
-
-    errVec = hk * fERR;
+    % Compute state error
+    errVec = (deltaStep * hk) * fERR;
+    % Compute maximum error with current (deltaStep * hk)
     maxErr = max(abs(errVec));
-    maxErrAllow = tol*max(max(abs(xk)), 1);
+    % Compute the maximum allowed (relative)
+    xMax = max(abs(xkErrEval)); % FAULT IS HERE: this must change to compute whether the relative tolerance is satisfied
+    maxErr_allowed = tol * max(xMax, 1.0);
 
     %% ADAPTIVE STEP EVALUATION
     % From reference (2)
 
     if notlastStep
         % Skip error control if last step
-        hNext = 0.9 * hk * (maxErrAllow/(eps+maxErr))^(1/5);
+        %         hNext = 0.9 * hk * (tol/maxErr)^(1/5);
 
-        if maxErr > maxErrAllow
-            % Repeat cycle with hNext else go ahead in time
+        % Update timestep size
+        %         hk = hNext;
+
+
+        if maxErr > maxErr_allowed
+            % NOTE: If error exceed relative tol:
+            % Repeat error evaluation cycle and update deltaStep
+
+            % Set repeat flag to update deltaStep
             repeatFlag = true;
-            % Update timestep size
-            hk = hNext;
-            continue;
-        else
-            repeatFlag = false;
 
+            % Determine minimum step for satefy
+            hmin = 16*eps(tk);
+            deltaStep = (maxErr_allowed/(maxErr + eps)) ^ (1.0/5.0);
+
+
+            if hk < hmin
+                warning('Minimum step size reached. Tolerance can not be satisfied: minimum enforced.')
+                hk = hmin;
+                repeatFlag = false;
+            end
+
+        else 
+
+            % Error tolerance satisfied, go ahead
+            repeatFlag = false;
             if (tk - t0) < eps
                 % Pre-allocate storage for trajectory and time grid based on the
                 % first hk that satisfies the tolerance (heuristic)
-                ALLOC_SIZE = 5*ceil((tf-tk)/(hNext));
+                ALLOC_SIZE = ceil((tf-tk)/hk);
+
                 tGridTemp = zeros(ALLOC_SIZE, 1);
-                xStateTemp = zeros(Ndim, ALLOC_SIZE );
+                xStateTemp = zeros(Ndim, ALLOC_SIZE);
             end
 
         end
 
+        % Modify step size for next iteration
+        hk = min(deltaStep * hk, 4*hk);
+        deltaStep = 1; % Reset Delta Step
 
     end
 
-    %% NEXT VALUE EVALUATION (RK5)
+
+    %% MOVE TO NEXT STEP
     if repeatFlag == false
 
-        % Update time
+        % Update solution time
         tk = tk + hk;
-        xk = RK5eval(xk, fStages, hk, C5);
+        xk = xkErrEval;
 
-        hk = min(hNext, 4*hk);
         % Update step counter
         stepNum = stepNum + 1;
-        
+
         % Store time and trajectory
         tGridTemp(stepNum+1) = tk;
         xStateTemp(:, stepNum+1) = xk;
+
 
     end
 
