@@ -1,7 +1,7 @@
 function dInvQuatSeq = qInvert(dQuatSeq, bIS_VSRPplus) %#codegen
 arguments
-    dQuatSeq     (4, :)
-    bIS_VSRPplus (1,1) logical
+    dQuatSeq     (4,:)
+    bIS_VSRPplus (1,1) logical {islogical, isscalar} = true
 end
 %% PROTOTYPE
 % dInvQuatSeq = qInvert(dQuatSeq, bIS_VSRPplus)
@@ -39,12 +39,6 @@ end
 % [-]
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
-if nargin < 2
-    % Default behaviour
-    bIS_VSRPplus = true;
-end
-
-assert(islogical(bIS_VSRPplus), 'Function expected a boolean flag as second input, but found a different dtype!')
 
 if bIS_VSRPplus == true
     dInvQuatSeq = [-dQuatSeq(1:3, :); dQuatSeq(4, :)];

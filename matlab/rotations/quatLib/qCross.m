@@ -1,7 +1,8 @@
-function q1xq2 = qCross(q1, q2) %#codegen
+function q1xq2 = qCross(q1, q2, bIS_VSRPplus) %#codegen
 arguments
-    q1 (4,1)
-    q2 (4,1)
+    q1 (4,1) {isvector, isnumeric}
+    q2 (4,1) {isvector, isnumeric}
+    bIS_VSRPplus (1,1) logical {isscalar, islogical}
 end
 %% PROTOTYPE
 % q1xq2 = qCross(q1, q2)
@@ -27,10 +28,21 @@ end
 % [-]
 % -------------------------------------------------------------------------------------------------------------
 
-q1xq2 = [q1(4) q1(3) -q1(2) q1(1); ...
-         -q1(3) q1(4) q1(1) q1(2); ...
-          q1(2) -q1(1) q1(4) q1(3); ...
-         -q1(1) -q1(2) -q1(3) q1(4)] * q2;
+if bIS_VSRPplus
+    % Scalar last
+    dQ = [q1(4) q1(3) -q1(2) q1(1); ...
+        -q1(3) q1(4) q1(1) q1(2); ...
+        q1(2) -q1(1) q1(4) q1(3); ...
+        -q1(1) -q1(2) -q1(3) q1(4)];
 
+else
+    % Scalar first
+    dQ = [ q1(1)  -q1(2)  -q1(3)  -q1(4);
+        q1(2)   q1(1)  -q1(4)   q1(3);
+        q1(3)   q1(4)   q1(1)  -q1(2);
+        q1(4)  -q1(3)   q1(2)   q1(1) ];
+end
+
+q1xq2 = dQ * q2;
 
 end
