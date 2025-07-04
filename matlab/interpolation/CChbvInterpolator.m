@@ -18,7 +18,7 @@ classdef CChbvInterpolator < CInterpolator
     % [-]
     % -------------------------------------------------------------------------------------------------------------
     %% Future upgrades
-    % [-]
+    % [MAJOR] bug to solve: recursive polynomial evaluation seems incorrect due to initial conditions!
     % -------------------------------------------------------------------------------------------------------------
 
     properties (SetAccess = protected, GetAccess = public)
@@ -131,16 +131,21 @@ classdef CChbvInterpolator < CInterpolator
             assert(self.ui8PolyDeg > 2, 'Error: selected degree is too low!')
             dPolyTermsValues = coder.nullcopy(zeros(self.ui8PolyDeg + 1, 1, 'double'));
 
-            % Initialize recursion
-            dPolyTermsValues(1) = 0.0;
-            dPolyTermsValues(2) = 1.0;
-
             if bApplyScaling == true
                 dScaledPoint = (2 * dEvalPoint - (self.dDomainBounds(1) + self.dDomainBounds(2))) / ...
                     (self.dDomainBounds(2) - self.dDomainBounds(1));
             else
                 dScaledPoint = dEvalPoint;
             end
+
+            % Initialize recursion
+            % dPolyTermsValues(1) = 1.0;
+            % dPolyTermsValues(2) = dScaledPoint;
+
+            % FIXME, these are incorrect but for some reason they work
+            dPolyTermsValues(1) = 0.0;
+            dPolyTermsValues(2) = 1.0;
+
 
             for idN = 3:self.ui8PolyDeg + 1
                 dPolyTermsValues(idN) = 2.0 * dScaledPoint * dPolyTermsValues(idN-1) - dPolyTermsValues(idN-2);
@@ -179,7 +184,7 @@ classdef CChbvInterpolator < CInterpolator
 
             % Call data matrix fix if QUAT type
             if self.enumInterpType == EnumInterpType.QUAT
-                [self, dDataMatrix] = fixQuatSignDiscontinuity(self, dDataMatrix');
+                [self, dDataMatrix] = self.fixQuatSignDiscontinuity(self, dDataMatrix');
             end
 
             % Compute regressors matrix on scaled domain

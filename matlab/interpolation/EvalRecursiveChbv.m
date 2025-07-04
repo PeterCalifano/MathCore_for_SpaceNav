@@ -36,7 +36,13 @@ end
 assert(ui32PolyDeg > 2, 'Error: selected degree is too low!')
 dChbvPolynomial = zeros(ui32PolyMaxDeg + 1, 1);
 
+% ACHTUNG the initialization of recursion is incorrect but the correct version does not work!
+% TODO urgently review and debug implementation
+
 % Initialize recursion
+% dChbvPolynomial(1) = 1.0;
+% dChbvPolynomial(2) = dScaledPoint;
+
 dChbvPolynomial(1) = 0.0;
 dChbvPolynomial(2) = 1.0;
 
