@@ -79,7 +79,7 @@ function dQuatErr = AnglesToquatErr(dAngles)
 arguments
     dAngles (3,:) double {isvector, isnumeric}
 end
-% Convert small-angle vector to quaternion error
+
 dTheta = norm(dAngles);
 
 if dTheta > 0
