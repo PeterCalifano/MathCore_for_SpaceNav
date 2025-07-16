@@ -94,7 +94,7 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
                     dQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_RKMK4(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
 
                 case 'rk4'
-                    dQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrSetp_RK4(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
+                    dQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_RK4(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
 
             end
 
@@ -221,7 +221,7 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
             dQuatOut = dQuat ./ vecnorm(dQuat);
         end
 
-        function dQuatOut = IntegrSetp_RK4(dQuat0, ...
+        function dQuatOut = IntegrStep_RK4(dQuat0, ...
                                         fcnEvalOmegaAngVel, ...
                                         dTstamp, ...
                                         dDeltaTime)
