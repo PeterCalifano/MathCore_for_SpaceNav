@@ -63,7 +63,6 @@ dTimegrid = 0.0:120:8*86400;
 bIsTimeGridRelative = true;
 
 charKernelPathRoot = "/home/peterc/devDir/projects-DART/data/rcs-1/phase-B/kernels/mk";
-charCKKernelName   = "/home/peterc/devDir/projects-DART/data/rcs-1/phase-B/kernels/fk/apophis.fk";
 
 if not(strcmpi(charKernelPathRoot, ""))
     charCurrentDir = pwd;
@@ -94,33 +93,55 @@ end
                                                 "bUseKernelInitialTimestamp", bUseKernelInitialTimestamp);
 
 % Generate new attitude data for the target, starting from initial condition
+dAbsIntergTimegrid = objDataset.dTimestamps;
 dQuat0      = DCM2quat(objDataset.dDCM_TBfromW(:,:,1), false);
-i32CKHandle = cspice_cklpf( char(charCKKernelName) );
+% i32CKHandle = cspice_cklpf( char(charCKKernelName) );
 
 % Documentation: https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/MATLAB/mice/cspice_ckgpav.html
-[~, dRefAngVelSeq] = cspice_ckgpav(i32CKHandle, ...
-                                   dTimegrid, ...
-                                   1E-6, ...
-                                   'APOPHIS_FIXED'); % Requires CK kernels!
+i32ApophisFrame_ID = -200999422; % int32 ID of the frame 
+i32ApophisFrame_ID = 20099942;
+
+[dDCM, dRefAngVelSeq, dTimeOuts, bFound] = cspice_ckgpav(int32(i32ApophisFrame_ID), ...
+                                                           dAbsIntergTimegrid, ...
+                                                           1E-6, ...
+                                                           'APOPHIS_HF'); % Requires CK kernels!
 
 %% Integrate using constant angular velocity
 % Compute perturbed angular velocity at initial time instant
-dPertubAngVel0 = dRefAngVelSeq(:,1) + deg2rad([0.1; 0.1; 0.1]) .* randn(3,1);
+dPertubAngVel0 = dRefAngVelSeq(:,1) + deg2rad([0.01; 0.01; 0.01]) .* randn(3,1);
 
 % Integrate attitude kinematics 
-% TODO modify implementation to enable usage of dt smaller than timegrid
 objQuatIntegr = CQuatKinematicsIntegrator();
-[dQuatEndConstant0, dQuatSeqConstant0] = objQuatIntegr.integrate(dQuat0, ...
+dTimestep = 1;
+
+[dQuatEndConstant0, dTimegridOut, dQuatSeqConstant0] = objQuatIntegr.integrate(dQuat0, ...
                                                                 dPertubAngVel0, ...
                                                                 dTimegrid, ...
                                                                 'rkmk4', ...
-                                                                dt);
+                                                                dTimestep);
 % Plot visualization
-objDataset.plotDatasetData();
+objDataset.plotDatasetData("dTargetAttitudeSet2", QuatSeq2DCM(dQuatSeqConstant0, false), ...
+                            "bPlotTargetAttitude", true);
+return
 
-%% Integrate using angular velocity profile
-% TODO
+%% Integrate using angular velocity profile (internally defined spline)
+% Integrate attitude kinematics 
+objQuatIntegr = CQuatKinematicsIntegrator(); %#ok<UNRCH>
+dTimestep = 1;
 
+[dQuatEndConstant0, dTimegridOut, dQuatSeqConstant0] = objQuatIntegr.integrate(dQuat0, ...
+                                                                dRefAngVelSeq, ...
+                                                                dTimegrid, ...
+                                                                'rkmk4', ...
+                                                                dTimestep, ...
+                                                                1.0, ...
+                                                                dAbsIntergTimegrid);
+
+
+% Plot visualization
+objDataset.plotDatasetData("dTargetAttitudeSet2", QuatSeq2DCM(dQuatSeqConstant0, false), ...
+                            "bPlotTargetAttitude", true);
+return
 
 %% Integrate dynamics and kinematics
 % TODO
