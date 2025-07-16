@@ -44,7 +44,7 @@ classdef testCQuatKinematicsIntegrator < matlab.unittest.TestCase
             tgrid = linspace(0,1,11);
 
             % Integrate
-            [qEnd, qSeq] = testCase.Integr.integrate(q0, omega, tgrid, 'rk4');
+            [qEnd, dTimegridOut, qSeq] = testCase.Integr.integrate(q0, omega, tgrid, 'rk4');
             % All outputs should equal the initial quaternion
             testCase.verifyEqual(qSeq, repmat(q0,1,numel(tgrid)), 'AbsTol', testCase.Tolerance);
             testCase.verifyEqual(qEnd, q0, 'AbsTol', testCase.Tolerance);
@@ -58,11 +58,28 @@ classdef testCQuatKinematicsIntegrator < matlab.unittest.TestCase
             tgrid = 0:dt:1;
 
             % Integrate
-            [qEnd, ~] = testCase.Integr.integrate(q0, omega, tgrid, 'rk4', dt);
+            [qEnd, dTimegridOut, qSeq] = testCase.Integr.integrate(q0, omega, tgrid, 'rk4', dt);
             % Final rotation is by pi radians about Z:
             expected = [cos(pi/2); 0;0;sin(pi/2)];
             testCase.verifyEqual(qEnd, expected, 'AbsTol', 1e-3);
+            testCase.verifyEqual(tgrid, dTimegridOut, 'AbsTol', 1e-6)
         end
+
+        function testConstantOmegaRK4_CustomTimegrid(testCase)
+            % Constant rotation about Z at pi rad/s for 1 second
+            q0   = [1;0;0;0];
+            omega = [0;0;pi];
+            dt    = 0.06;
+            tgrid = 0:0.1:1;
+
+            % Integrate
+            [qEnd, dTimegridOut, qSeq] = testCase.Integr.integrate(q0, omega, tgrid, 'rk4', dt);
+            % Final rotation is by pi radians about Z:
+            expected = [cos(pi/2); 0;0;sin(pi/2)];
+            testCase.verifyEqual(qEnd, expected, 'AbsTol', 1e-3);
+            testCase.verifyEqual(tgrid, dTimegridOut, 'AbsTol', 1e-6)
+        end
+
 
         function testConstantOmegaLieGroupEuler(testCase)
             % Constant rotation about Z at pi rad/s for 1 second
@@ -71,10 +88,11 @@ classdef testCQuatKinematicsIntegrator < matlab.unittest.TestCase
             dt    = 0.1;
             tgrid = 0:dt:1;
 
-            [qEnd, ~] = testCase.Integr.integrate(q0, omega, tgrid, 'lie_euler', dt);
+            [qEnd, dTimegridOut, qSeq] = testCase.Integr.integrate(q0, omega, tgrid, 'lie_euler', dt);
             % Final rotation is by pi radians about Z:
             expected = [cos(pi/2); 0;0;sin(pi/2)];
             testCase.verifyEqual(qEnd, expected, 'AbsTol', 1e-3);
+            testCase.verifyEqual(tgrid, dTimegridOut, 'AbsTol', 1e-6)
         end
 
         function testConstantOmegaRKMK4(testCase)
@@ -85,11 +103,12 @@ classdef testCQuatKinematicsIntegrator < matlab.unittest.TestCase
             tgrid = 0:dt:1;
 
             % Integrate
-            [qEnd, ~] = testCase.Integr.integrate(q0, omega, tgrid, 'rkmk4', dt);
+            [qEnd, dTimegridOut, qSeq] = testCase.Integr.integrate(q0, omega, tgrid, 'rkmk4', dt);
 
             % Final rotation is by pi radians about Z:
             expected = [cos(pi/2); 0;0;sin(pi/2)];
             testCase.verifyEqual(qEnd, expected, 'AbsTol', 1e-3);
+            testCase.verifyEqual(tgrid, dTimegridOut, 'AbsTol', 1e-6)
         end
 
         function testLieEulerVsRKMK4(testCase)
@@ -100,9 +119,11 @@ classdef testCQuatKinematicsIntegrator < matlab.unittest.TestCase
             tgrid = [0 dt];
 
             % Integrate and compare
-            [qLE, ~] = testCase.Integr.integrate(q0, omega, tgrid, 'lie_euler', dt);
-            [qRK, ~] = testCase.Integr.integrate(q0, omega, tgrid, 'rkmk4',     dt);
+            [qLE, dTimegridOutEuler, qSeqEuler] = testCase.Integr.integrate(q0, omega, tgrid, 'lie_euler', dt);
+            [qRK, dTimegridOutRK, qSeqRK] = testCase.Integr.integrate(q0, omega, tgrid, 'rkmk4',     dt);
             testCase.verifyLessThan(norm(qLE - qRK), 1e-3);
+            testCase.verifyEqual(dTimegridOutEuler, dTimegridOutRK, 'AbsTol', 1e-6)
+            testCase.verifyEqual(qSeqEuler, qSeqRK, 'AbsTol', 1e-4)
         end
 
         function testOmegaAngVelProfileRKMK4(testCase)
@@ -119,11 +140,12 @@ classdef testCQuatKinematicsIntegrator < matlab.unittest.TestCase
             tgrid = 0:dt:1;
 
             % Integrate
-            [qEnd, ~] = testCase.Integr.integrate(q0, omega, tgrid, 'rkmk4', dt);
+            [qEnd, dTimegridOut, qSeq] = testCase.Integr.integrate(q0, omega, tgrid, 'rkmk4', dt);
 
             % Final rotation is by pi radians about Z:
             expected = [cos(pi/2); 0;0;sin(pi/2)];
             testCase.verifyEqual(qEnd, expected, 'AbsTol', 1e-3);
+            testCase.verifyEqual(tgrid, dTimegridOut, 'AbsTol', 1e-6)
 
         end
 

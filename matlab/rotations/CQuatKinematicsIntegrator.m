@@ -24,13 +24,14 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
             % Default constructor
         end
 
-        function [dTmpQuatOut, dQuatOutSeq] = integrate(self, ...
-                                                        dQuat0, ...
-                                                        varOmegaAngVel, ...
-                                                        dTimegrid, ...
-                                                        enumMethod, ...
-                                                        dDeltaT, ...
-                                                        dDefaultMaxDeltaT)
+        function [dTmpQuatOut, dTimegridOut, dQuatOutSeq] = integrate(self, ...
+                                                                    dQuat0, ...
+                                                                    varOmegaAngVel, ...
+                                                                    dTimegrid, ...
+                                                                    enumMethod, ...
+                                                                    dDeltaT, ...
+                                                                    dDefaultMaxDeltaT, ...
+                                                                    dAngVelTimegrid)
             arguments
                 self                (1,1) CQuatKinematicsIntegrator
                 dQuat0              (4,1) double {mustBeFinite}
@@ -39,6 +40,7 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
                 enumMethod          (1,:) char {mustBeMember(enumMethod, {'lie_euler', 'rkmk4', 'rk4'})}
                 dDeltaT             (1,1) double {mustBeScalarOrEmpty, mustBeGreaterThanOrEqual(dDeltaT, 0.0)} = 0.0;
                 dDefaultMaxDeltaT   (1,1) double {mustBeScalarOrEmpty, mustBeGreaterThanOrEqual(dDefaultMaxDeltaT, 0.0)} = 1.0;
+                dAngVelTimegrid     = [];
             end
 
             bDeduceDeltaT = dDeltaT == 0.0;
@@ -48,7 +50,6 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
             dT0 = dTimegrid(1);
             dTf = dTimegrid(end);
 
-            idT = 2;        
             if size(dTimegrid,2) == 2
                 assert(dDeltaT > 0.0, 'ERROR: timestep must be provided if timegrid is given as [t0,tf].')
                 dTimegrid = dT0:dDeltaT:dTf;
@@ -58,6 +59,7 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
             % Allocate output sequence array
             ui32NumSteps = size(dTimegrid, 2);
             dQuatOutSeq = zeros(4, ui32NumSteps);
+            dTimegridOut = zeros(1, ui32NumSteps);
 
             % Determine angular velocity mode
             if isa(varOmegaAngVel, "double")
@@ -65,10 +67,17 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
                     varOmegaAngVel_ = @(dTstamp) varOmegaAngVel;
                 else
                     % TODO add interpolation of omega angular velocity to perform step (use splining)
-                    assert(size(varOmegaAngVel, 2) == ui32NumSteps, 'ERROR: angular velocity profile size must match size of timegrid.');
                     
+                    if isempty(dAngVelTimegrid)
+                        dAngVelTimegrid = dTimegrid;
+                        assert(size(varOmegaAngVel, 2) == ui32NumSteps, 'ERROR: angular velocity profile size must match size of timegrid.');
+                    else
+                        assert(size(varOmegaAngVel, 2) == length(dAngVelTimegrid), ...
+                            'ERROR: angular velocity profile size must match size of input timegrid dAngVelTimegrid.');
+                    end
+
                     % Define angular velocity spline
-                    varOmegaAngVel_ = @(dTstamp) spline(dTimegrid, varOmegaAngVel, dTstamp);
+                    varOmegaAngVel_ = @(dTstamp) spline(dAngVelTimegrid, varOmegaAngVel, dTstamp);
 
                 end
 
@@ -94,31 +103,49 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
             
             % Initialize variables
             dCurrentTime = dT0;
-            ui32CurrentIntegrStepIdx = uint32(1);
+            dQuatOutSeq(:,1) = dTmpQuatOut;
+            dTimegridOut(1)  = dCurrentTime;
+            ui32CurrentIntegrStepIdx = uint32(2);
 
-            % Integration cycle
+            % Integration cycle from t0 to tf
             while dCurrentTime < dTf
-                
-                % Update integration time step
-                if idT < ui32NumSteps && bDeduceDeltaT
-                    dDeltaT_ = min(dTimegrid(idT) - dTimegrid(idT-1), dDefaultMaxDeltaT);
 
-                elseif not(bDeduceDeltaT)
-                    % Not constrained by default max delta T
-                    dDeltaT_ = dDeltaT;
+                % Determine internal grid step
+                dInternalLoopTime_ = dCurrentTime;
+                dNextTargetTime = dTimegrid(ui32CurrentIntegrStepIdx);
+
+                % Internal loop (over single step between timegrid entries
+                dAccumStepTime = 0.0;
+                while (dNextTargetTime - dInternalLoopTime_) > 1.5 * eps
+                
+                    % Update integration time step
+                    dInternalStepInterval_ = dTimegrid(ui32CurrentIntegrStepIdx) - dTimegrid(ui32CurrentIntegrStepIdx-1);
+
+                    if ui32CurrentIntegrStepIdx < ui32NumSteps && bDeduceDeltaT
+                        dDeltaT_ = min(dInternalStepInterval_, dDefaultMaxDeltaT);
+
+                    elseif not(bDeduceDeltaT)
+                        % Not constrained by default max delta T
+                        dDeltaT_ = dDeltaT;
+                    end
+
+                    dTmpDeltaStep = min(dDeltaT_, dTimegrid(ui32CurrentIntegrStepIdx) - dInternalLoopTime_);
+                    
+                    % Integrate over dTmpDeltaStep time
+                    dTmpQuatOut = dQuatIntegr(dTmpQuatOut, varOmegaAngVel_, dCurrentTime, dTmpDeltaStep);
+
+                    dInternalLoopTime_ = dInternalLoopTime_ + dTmpDeltaStep;
+                    dAccumStepTime = dAccumStepTime + dTmpDeltaStep;
                 end
 
-                dTmpDeltaStep = min(dDeltaT_, dTf - dCurrentTime);
-            
-                % Integrate over dTmpDeltaStep time
-                dTmpQuatOut = dQuatIntegr(dTmpQuatOut, varOmegaAngVel_, dCurrentTime, dTmpDeltaStep);
-                    
+                % Update current index and timegrid
+                dCurrentTime = round(dInternalLoopTime_, 16); % dTimegrid(ui32CurrentIntegrStepIdx) + dAccumStepTime;
+
                 % Store in sequence
                 % dTmpQuatOut = QuatKinematicsIntegrator.NormalizeSeq(dTmpQuatOut);
                 dQuatOutSeq(:, ui32CurrentIntegrStepIdx) = dTmpQuatOut;
+                dTimegridOut(ui32CurrentIntegrStepIdx) = dCurrentTime;
 
-                % Update current index and timegrid
-                dCurrentTime = dCurrentTime + dTmpDeltaStep;
                 ui32CurrentIntegrStepIdx = ui32CurrentIntegrStepIdx + uint32(1);
             end
 
