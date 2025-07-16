@@ -1,6 +1,6 @@
 function dDCM = QuatSeq2DCM(dQuatRot, bIS_VSRPplus) %#codegen
 arguments
-    dQuatRot (4, :) double {ismatrix, isnumeric}
+    dQuatRot (4,:) double {ismatrix, isnumeric}
     bIS_VSRPplus (1,1) logical
 end
 %% PROTOTYPE
@@ -25,6 +25,7 @@ end
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 16-12-2023    Pietro Califano     Coded from reference.
+% 16-07-2025    Pietro Califano     Change expected input shape
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
@@ -35,11 +36,11 @@ end
 
 %% Function code
 % Output array initialization
-Nquats = size(dQuatRot, 1);
-dDCM = coder.nullcopy(zeros(3, 3, Nquats));
+ui32Nquats = size(dQuatRot, 2);
+dDCM = coder.nullcopy(zeros(3, 3, ui32Nquats));
 
-for idV = 1:Nquats
-    dDCM(:, :, idV) = Quat2DCM(dQuatRot(idV, :), bIS_VSRPplus);
+for idV = 1:ui32Nquats
+    dDCM(:, :, idV) = Quat2DCM(dQuatRot(:, idV), bIS_VSRPplus);
 end
 
 
