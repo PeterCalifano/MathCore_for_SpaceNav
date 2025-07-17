@@ -1,8 +1,24 @@
-function dQuatOut = InterpolateSlerp(dQ1, dQ2, dTGrid)%#codegen
+function dQuatSeqOut = InterpolateSlerp(dQ1, dQ2, dTGrid)%#codegen
+%% SIGNATURE
+% dQuatOut = InterpolateSlerp(dQ1, dQ2, dTGrid)%#codegen
+% -------------------------------------------------------------------------------------------------------------
+%% DESCRIPTION
 %SLERP Spherical linear interpolation between two quaternions
-%   dQuatOut = Slerp(dQ1, dQ2, dTGrid) returns a 4xN array of interpolated
-%   quaternions between dQ1 and dQ2 at the fractional times specified in
-%   dTGrid (1xN vector in [0,1]).
+%   dQuatOut = Slerp(dQ1, dQ2, dTGrid) returns a 4xN array of interpolated quaternions between dQ1 and 
+%   dQ2 at the fractional times specified in dTGrid (1xN vector in [0,1]).
+% -------------------------------------------------------------------------------------------------------------
+%% INPUT
+% dQ1     (4,1) double
+% dQ2     (4,1) double
+% dTGrid  (1,:) double
+% -------------------------------------------------------------------------------------------------------------
+%% OUTPUT
+% dQuatOut
+% -------------------------------------------------------------------------------------------------------------
+%% CHANGELOG
+% 17-06-2025    Pietro Califano     First implementation supporting arbitrarily dense timegrid
+% -------------------------------------------------------------------------------------------------------------
+%% DEPENDENCIES
 
 arguments
     dQ1     (4,1) double
@@ -19,12 +35,12 @@ dTmpDot = dot(dQ1, dQ2);
 % Shortest path correction
 if dTmpDot < 0
     dTmpDot = -dTmpDot;
-    dQ2   = -dQ2;
+    dQ2     = -dQ2;
 end
 
 % Preallocate output
 ui32TmpNumTimes = uint32(numel(dTGrid));
-dQuatOut        = zeros(4, ui32TmpNumTimes);
+dQuatSeqOut     = zeros(4, ui32TmpNumTimes);
 
 % Check for nearly linear case
 if dTmpDot > 0.9995
@@ -35,7 +51,7 @@ if dTmpDot > 0.9995
     for ui32TmpIdx = 1:ui32TmpNumTimes
         dTmpQuat = dTmpRatioA(ui32TmpIdx)*dQ1 + dTmpRatioB(ui32TmpIdx)*dQ2;
         dTmpNorm = norm(dTmpQuat);
-        dQuatOut(:,ui32TmpIdx) = dTmpQuat / dTmpNorm;
+        dQuatSeqOut(:,ui32TmpIdx) = dTmpQuat / dTmpNorm;
     end
 
 else
@@ -46,7 +62,7 @@ else
     for ui32TmpIdx = 1:ui32TmpNumTimes
         dTmpRatioA = sin((1 - dTGrid(ui32TmpIdx))*dTmpTheta) / dTmpSinTheta;
         dTmpRatioB = sin(dTGrid(ui32TmpIdx)*dTmpTheta)       / dTmpSinTheta;
-        dQuatOut(:,ui32TmpIdx) = dTmpRatioA*dQ1 + dTmpRatioB*dQ2;
+        dQuatSeqOut(:,ui32TmpIdx) = dTmpRatioA*dQ1 + dTmpRatioB*dQ2;
     end
 end
 
