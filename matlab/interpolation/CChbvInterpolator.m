@@ -97,25 +97,27 @@ classdef CChbvInterpolator < CInterpolator
             dInterpVector(:) = transpose( reshape(self.dInterpCoeffsBuffer,...
                 self.ui8PolyDeg, self.i32OutputVectorSize) ) * dChbvPolynomial(2:end);
 
+            % DEVNOTE: Not needed. Sign switch does not matter at evaluation time (does not change the
+            % corresponding attitude value, since it results from the quaternion double cover).
             % Switch sign of the interpolated value if required
             % Check if within "switch intervals
-            if bIS_ATT_QUAT == true
-                assert(not(isempty(self.dSwitchIntervals)))
-
-                if bApplyScaling == false
-                    % Perform unscaling to be consistent with switch intervals (TBC TEST)
-                    dEvalPointCheck = ( (self.dDomainBounds(2) - self.dDomainBounds(1)) * dEvalPoint + (self.dDomainBounds(1) + self.dDomainBounds(2)) ) / 2; 
-                else
-                    dEvalPointCheck = dEvalPoint;
-                end
-
-                for idCheck = 1:size(self.dSwitchIntervals, 1)
-                    
-                    if dEvalPointCheck >= self.dSwitchIntervals(idCheck, 1) && dEvalPointCheck < self.dSwitchIntervals(idCheck, 2)
-                        dInterpVector(:) = - dInterpVector(:);
-                    end
-                end
-            end
+            % if bIS_ATT_QUAT == true
+            %     assert(not(isempty(self.dSwitchIntervals)))
+            % 
+            %     if bApplyScaling == false
+            %         % Perform unscaling to be consistent with switch intervals (TBC TEST)
+            %         dEvalPointCheck = ( (self.dDomainBounds(2) - self.dDomainBounds(1)) * dEvalPoint + (self.dDomainBounds(1) + self.dDomainBounds(2)) ) / 2; 
+            %     else
+            %         dEvalPointCheck = dEvalPoint;
+            %     end
+            % 
+            %     for idCheck = 1:size(self.dSwitchIntervals, 1)
+            % 
+            %         if dEvalPointCheck >= self.dSwitchIntervals(idCheck, 1) && dEvalPointCheck < self.dSwitchIntervals(idCheck, 2)
+            %             dInterpVector(:) = - dInterpVector(:);
+            %         end
+            %     end
+            % end
 
         end
 
