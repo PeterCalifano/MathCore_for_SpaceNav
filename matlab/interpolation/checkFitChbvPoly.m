@@ -17,25 +17,27 @@ arguments
     dSwitchIntervals    (:, :) double = []
 end
 %% PROTOTYPE
-% [o_strfitStats] = checkFitChbvPoly(i_ui8PolyDeg, i_dInterpDomain, ...
-%     i_dDataMatrix, i_dDomainLB, i_dDomainUB)
+% [strfitStats] = checkFitChbvPoly(ui8PolyDeg, dInterpDomain, ...
+%     dDataMatrix, dDomainLB, dDomainUB)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% What the function does
+% Function performing fitting check for Chebyshev interpolation functions. It uses randomly picked input
+% sample points to perform verification that the interpolation has been fitted correctly. The function uses
+% the dot product to evaluate quaternions instead of subtraction.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% i_ui8PolyDeg    (1, 1) uint8
-% i_dInterpDomain (:, 1) double
-% i_dChbvCoeffs   (:, 1) double
-% i_dDataMatrix   (:, :) double
-% i_dDomainLB     (1, 1) double
-% i_dDomainUB     (1, 1) double
-% i_bIS_ATT_QUAT  (1, 1) logical
-% i_dswitchIntervals (:, :) double = []
+% ui8PolyDeg    (1, 1) uint8
+% dInterpDomain (:, 1) double
+% dChbvCoeffs   (:, 1) double
+% dDataMatrix   (:, :) double
+% dDomainLB     (1, 1) double
+% dDomainUB     (1, 1) double
+% bIS_ATT_QUAT  (1, 1) logical
+% dswitchIntervals (:, :) double = []
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% o_strfitStats
-% o_dChbvInterpVector
+% strfitStats
+% dChbvInterpVector
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 08-05-2024        Pietro Califano         Function adapted from testing script.
@@ -48,42 +50,42 @@ end
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
 if bIS_ATT_QUAT == true
-    i_ui8OutputSize = 4; % HARDCODED for specialization
-    assert( size(dDataMatrix, 1) == i_ui8OutputSize );
+    ui8OutputSize = 4; % HARDCODED for specialization
+    assert( size(dDataMatrix, 1) == ui8OutputSize );
 else
-    i_ui8OutputSize = size(dDataMatrix, 1);
+    ui8OutputSize = size(dDataMatrix, 1);
     dSwitchIntervals = [];
 end
 
 assert( size(dDataMatrix, 2) == length(dInterpDomain) );
 
 % Evaluation at test points
-Npoints = 5000;
-Npoints = Npoints - 2;
+ui32Npoints = 5000;
+ui32Npoints = ui32Npoints - 2;
 
-testpointsIDs = sort( randi( length(dInterpDomain), Npoints, 1 ), 'ascend' );
+testpointsIDs = sort( randi( length(dInterpDomain), ui32Npoints, 1 ), 'ascend' );
 
 TestPoints_Time = [dInterpDomain(1); dInterpDomain(testpointsIDs); dInterpDomain(end)];
 TestPoints_Labels = [dDataMatrix(:, 1),...
-    dDataMatrix(:, testpointsIDs), ...
-    dDataMatrix(:, end)];
+                dDataMatrix(:, testpointsIDs), ...
+                dDataMatrix(:, end)];
 
-dChbvInterpVector = zeros(i_ui8OutputSize, length(TestPoints_Time));
+dChbvInterpVector = zeros(ui8OutputSize, length(TestPoints_Time));
 
 evalRunTime = zeros(length(TestPoints_Time), 1);
 
 for idP = 1:length(TestPoints_Time)
-    i_dEvalPoint = TestPoints_Time(idP);
+    dEvalPoint = TestPoints_Time(idP);
 
     if bIS_ATT_QUAT == true 
         tic
-        dChbvInterpVector(:, idP) = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, i_ui8OutputSize, ...
-            i_dEvalPoint, dChbvCoeffs, dSwitchIntervals, dDomainLB, dDomainUB);
+        dChbvInterpVector(:, idP) = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ui8OutputSize, ...
+            dEvalPoint, dChbvCoeffs, dSwitchIntervals, dDomainLB, dDomainUB);
 
     else
         tic
-        dChbvInterpVector(:, idP) = evalChbvPolyWithCoeffs(ui32PolyDeg, i_ui8OutputSize, ...
-            i_dEvalPoint, dChbvCoeffs, dDomainLB, dDomainUB);
+        dChbvInterpVector(:, idP) = evalChbvPolyWithCoeffs(ui32PolyDeg, ui8OutputSize, ...
+            dEvalPoint, dChbvCoeffs, dDomainLB, dDomainUB);
     end
 
     evalRunTime(idP) = toc;
@@ -115,12 +117,16 @@ else
 
     % Printing
     fprintf('Max absolute error: %4.4g [-]\n', strfitStats.maxAbsErr);
-    fprintf('Average absolute error: %4.4g, %4.4g, %4.4g [-]\n', strfitStats.avgAbsErr(1), ...
-        strfitStats.avgAbsErr(2), strfitStats.avgAbsErr(3));
+
+    % Print average absolute errors per component on one line (wraps for large N)
+    fprintf('Average absolute errors (per component): ');
+    fprintf('%4.4g ', strfitStats.avgAbsErr);
+    fprintf('[-]\n');
 
     fprintf('\nMax relative error: %4.4g [%%]\n', strfitStats.maxRelErr);
-    fprintf('Average relative error: %4.4g, %4.4g, %4.4g [%%]\n', strfitStats.avgRelErr(1), ...
-        strfitStats.avgRelErr(2), strfitStats.avgRelErr(3));
+    fprintf('Average relative errors (per component): ');
+    fprintf('%4.4g ', strfitStats.avgRelErr);
+    fprintf('[%%]\n');
 end
 
 

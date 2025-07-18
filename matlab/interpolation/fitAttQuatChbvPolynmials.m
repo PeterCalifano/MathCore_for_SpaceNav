@@ -52,11 +52,9 @@ end
 %% CHANGELOG
 % 08-05-2024        Pietro Califano     fitChbvPolynomials specification for Attitude quaternions, with error checks.
 % 01-02-2025        Pietro Califano     Minor changes for better compatibility with fncs of toolbox
+% 18-07-2025        Pietro Califano     Fix basis and fitting problem errors
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
-% [-]
-% -------------------------------------------------------------------------------------------------------------
-%% Future upgrades
 % [-]
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
@@ -64,12 +62,12 @@ end
 % Check input dimensions
 % i_dDataMatrix: [L, N] where N is the number of points, L is the output vector size
 assert(size(dDataMatrix, 2) == length(dInterpDomain));
-assert(ui32PolyDeg > 2);
+assert(ui32PolyDeg >= 2);
 
 assert(length(dInterpDomain) >= ui32PolyDeg +1);
 
 % Allocate output matrix
-ui32PtrToLastCoeff = ui32OutputSize * ui32PolyMaxDeg;
+ui32PtrToLastCoeff = ui32OutputSize * (ui32PolyMaxDeg+1);
 dChbvCoeffs = zeros(ui32PtrToLastCoeff, 1);
 
 if nargin < 3
@@ -78,7 +76,8 @@ if nargin < 3
 end
 
 % AUTOMATIC CHECK AND FIX OF DISCONTINUITIES
-[dDataMatrix, bIsSignSwitched, ui8howManySwitches, bsignSwitchDetectionMask] = fixQuatSignDiscontinuity(transpose(dDataMatrix));
+[dDataMatrix, bIsSignSwitched, ui8howManySwitches, ...
+    bsignSwitchDetectionMask] = fixQuatSignDiscontinuity(transpose(dDataMatrix));
 
 % Determine sign switch intervals
 dswitchIntervals = zeros(ui8howManySwitches, 2);
@@ -102,13 +101,13 @@ end
 dScaledInterpDomain = (2.*dInterpDomain - (dDomainUB+dDomainLB))./(dDomainUB-dDomainLB);
 
 % Compute regressors matrix on scaled domain
-dRegrMatrix = zeros(ui32PolyDeg, size(dDataMatrix, 2));
+dRegrMatrix = zeros(ui32PolyDeg+1, size(dDataMatrix, 2));
 
 for idN = 1:size(dDataMatrix, 2)
 
     % Evaluate Chebyshev polynomial at scaled point
     dTmpChbvPoly = EvalRecursiveChbv(ui32PolyDeg, dScaledInterpDomain(idN));
-    dRegrMatrix(:, idN) = dTmpChbvPoly(2:end);
+    dRegrMatrix(:, idN) = dTmpChbvPoly;
     
 end
 
