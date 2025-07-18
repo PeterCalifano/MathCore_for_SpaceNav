@@ -73,10 +73,10 @@ classdef CChbvInterpolator < CInterpolator
             % TODO: adapt from evalAttQuatChbvPolyWithCoeffs and evalChbvPolyWithCoeffs
             % Sanity checks
 
-            bIS_ATT_QUAT = false;
-            if self.enumInterpType == EnumInterpType.QUAT
-                bIS_ATT_QUAT = true;
-            end
+            % bIS_ATT_QUAT = false;
+            % if self.enumInterpType == EnumInterpType.QUAT
+            %     bIS_ATT_QUAT = true;
+            % end
 
             % Variables declaration
             dChbvPolynomial = coder.nullcopy(zeros(self.ui8PolyDeg+1, 1));
@@ -95,7 +95,7 @@ classdef CChbvInterpolator < CInterpolator
 
             % Compute interpolated output value by inner product with coefficients matrix
             dInterpVector(:) = transpose( reshape(self.dInterpCoeffsBuffer,...
-                self.ui8PolyDeg, self.i32OutputVectorSize) ) * dChbvPolynomial(2:end);
+                self.ui8PolyDeg + 1, self.i32OutputVectorSize) ) * dChbvPolynomial;
 
             % DEVNOTE: Not needed. Sign switch does not matter at evaluation time (does not change the
             % corresponding attitude value, since it results from the quaternion double cover).
@@ -133,16 +133,16 @@ classdef CChbvInterpolator < CInterpolator
             assert(self.ui8PolyDeg >= 2, 'ERROR: selected degree is too low!')
             dPolyTermsValues = coder.nullcopy(zeros(self.ui8PolyDeg + 1, 1, 'double'));
 
-            % Initialize recursion
-            dPolyTermsValues(1) = 0.0;
-            dPolyTermsValues(2) = 1.0;
-
             if bApplyScaling == true
                 dScaledPoint = (2 * dEvalPoint - (self.dDomainBounds(1) + self.dDomainBounds(2))) / ...
                     (self.dDomainBounds(2) - self.dDomainBounds(1));
             else
                 dScaledPoint = dEvalPoint;
             end
+
+            % Initialize recursion
+            dPolyTermsValues(1) = 1.0;
+            dPolyTermsValues(2) = dScaledPoint;
 
             for idN = 3:self.ui8PolyDeg + 1
                 dPolyTermsValues(idN) = 2.0 * dScaledPoint * dPolyTermsValues(idN-1) - dPolyTermsValues(idN-2);
@@ -178,7 +178,7 @@ classdef CChbvInterpolator < CInterpolator
             end
 
             % Allocate output matrix
-            self.dInterpCoeffsBuffer = zeros(self.i32OutputVectorSize*int32((self.ui8PolyDeg)), 1);
+            self.dInterpCoeffsBuffer = zeros(self.i32OutputVectorSize*int32((self.ui8PolyDeg+1)), 1);
 
             % Call data matrix fix if QUAT type
             if self.enumInterpType == EnumInterpType.QUAT
@@ -186,13 +186,13 @@ classdef CChbvInterpolator < CInterpolator
             end
 
             % Compute regressors matrix on scaled domain
-            dRegrMatrix = zeros(self.ui8PolyDeg, size(dDataMatrix, 2));
+            dRegrMatrix = zeros(self.ui8PolyDeg + 1, size(dDataMatrix, 2));
 
             for idN = 1:size(dDataMatrix, 2)
 
                 % Evaluate Chebyshev polynomial at scaled point
                 [self, dTmpChbvPoly] = self.evalPoly(self.dScaledInterpDomain(idN));
-                dRegrMatrix(:, idN) = dTmpChbvPoly(2:end);
+                dRegrMatrix(:, idN) = dTmpChbvPoly;
 
             end
 

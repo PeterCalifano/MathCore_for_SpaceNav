@@ -26,15 +26,18 @@ classdef testCChbvInterpolator < matlab.unittest.TestCase
 
             % Degree 3: returns 4 terms
             self = CChbvInterpolator(interpDomain, uint8(3));
+
             [~, dPoly] = self.evalPoly(0.5);
 
             test.verifySize(dPoly, [4,1]);
 
-            % Check known Chebyshev values: T0=0, T1=1, T2=2*x*T1-T0=1, T3=2*x*T2-T1=0
-            test.verifyEqual(dPoly(1), 0);
-            test.verifyEqual(dPoly(2), 1);
-            test.verifyEqual(dPoly(3), 1);
-            test.verifyEqual(dPoly(4), 0);
+            % Check known Chebyshev values: T0=1.0, T1=interpDomain_scaled(1), T2=2*x*T1-T0=1, T3=2*x*T2-T1=0
+            dScaledTime = (0.5 - interpDomain(1)) / (interpDomain(end) - interpDomain(1));
+
+            test.verifyEqual(dPoly(1), 1.0);
+            test.verifyEqual(dPoly(2), dScaledTime);
+            test.verifyEqual(dPoly(3), 2*dScaledTime*dPoly(2) - dPoly(1));
+            test.verifyEqual(dPoly(4), 2*dScaledTime*dPoly(3) - dPoly(2));
         end
         
         function testFitAndEvalInterpolantConstant(test)
