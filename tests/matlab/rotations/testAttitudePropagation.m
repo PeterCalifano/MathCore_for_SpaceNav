@@ -143,7 +143,69 @@ objDataset.plotDatasetData("dTargetAttitudeSet2", QuatSeq2DCM(dQuatSeqConstant0,
                             "bPlotTargetAttitude", true);
 return
 
-%% Integrate dynamics and kinematics
-% TODO
+%% test_TorqueFreeMotion_SymmetricTop
+% Torque-free motion for symmetric top (I1=I2 != I3)
+dI1 = 10;
+dI2 = 10;
+dI3 = 50;
+
+dI = diag([dI1, dI2, dI3]);
+objIntegrator = CRigidBodyDynamicsIntegrator(dI, CQuatKinematicsIntegrator());
+
+% Time grid
+dTimegrid = 0:0.1:100.0;
+
+% Initial angular velocity: small transverse and dominant spin about symmetry axis
+dOmega0 = [0.05; 0.0; 2.0];
+dQuat0 = [1; 0; 0; 0];
+
+varTorque = zeros(3,1);
+[dQuatSeq, dOmegaSeq] = objIntegrator.integrate(dTimegrid, ...
+    dQuat0, dOmega0, varTorque, 0.1, 'rk4_rkmk4', true, 1.0);
+
+% Analytical precession frequency: dOmega_p = (I3 - I1)/I1 * omega3
+dOmega_p = (dI3 - dI1)/dI1 * dOmega0(3);
+dA = dOmega0(1);
+
+% Visualize attitude sequence
+dOrigin_Frame = zeros(3,1);
+
+cellPlotColors = {'r', 'g', 'b'};
+cellPlotNames  = {'X', 'Y', 'Z'};
+
+objFig = figure('Renderer', 'opengl');
+
+[~, charTextColor, ~] = DefaultPlotOpts(objFig, ...
+    "charRenderer", "opengl", ...
+    "bUseBlackBackground", true);
+
+xlabel('X [-]');
+ylabel('Y [-]');
+zlabel('Z [-]');
+title('Propagated target attitude frames');
+grid off
+
+ui32Decimation = 1;
+for idAtt = 1:ui32Decimation:size(dQuatSeq, 2)
+
+    % Convert quaternion to DCM
+    dCamDCM_RenderFrameFromCam = Quat2DCM(dQuatSeq(:,idAtt), false);
+
+    [cellCameraAxes] = PlotFrameFromDCM(dOrigin_Frame, ...
+                                    dCamDCM_RenderFrameFromCam, ...
+                                    cellPlotColors, ...
+                                    cellPlotNames, ...
+                                    objFig, ...
+                                    "dAxisScale", 1.5, ...
+                                    "bShowArrowHead", true);
+    axis([-2 2 -2 2 -2 2]);
+    view(45,45);
+    drawnow
+    pause(0.05)
+    for idB = 1:length(cellCameraAxes)
+        delete(cellCameraAxes{idB})
+    end
+end
+
 
 
