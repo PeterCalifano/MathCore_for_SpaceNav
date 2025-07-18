@@ -30,19 +30,19 @@ classdef CChbvInterpolator < CInterpolator
 
     methods (Access = public)
         %% CONSTRUCTOR
-        function self = CChbvInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bENABLE_AUTO_CHECK, dDomainBounds, i32OutputVectorSize, bUSE_MEX)
+        function self = CChbvInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bEnableAutoFitCheck, dDomainBounds, i32OutputVectorSize, bUSE_MEX)
             arguments
                 dInterpDomain (1,:) double {isnumeric, isvector}
                 ui8PolyDeg    (1,1) uint8 {isnumeric, isscalar} = 15
                 enumInterpType (1,1) {isa(enumInterpType, 'EnumInterpType')} = EnumInterpType.VECTOR
-                bENABLE_AUTO_CHECK (1,1) logical {islogical} = true
+                bEnableAutoFitCheck (1,1) logical {islogical} = true
                 dDomainBounds (1, 2) double {isnumeric, isvector} = zeros(1,2)
                 i32OutputVectorSize (1,1) int32 {isnumeric, isscalar} = -1 % Expected output size for checks
                 bUSE_MEX            (1,1) logical {islogical} = false;
             end
 
             % Instantiate base class
-            self = self@CInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bENABLE_AUTO_CHECK, dDomainBounds, i32OutputVectorSize);
+            self = self@CInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bEnableAutoFitCheck, dDomainBounds, i32OutputVectorSize);
             
             % Compute scaled domain
             self.dScaledInterpDomain = (2.*self.dInterpDomain - (self.dDomainBounds(2) + self.dDomainBounds(1)) )./(self.dDomainBounds(2) - self.dDomainBounds(1));
@@ -128,7 +128,7 @@ classdef CChbvInterpolator < CInterpolator
                 i32LimitDegree (1,1) int32 {isscalar, isnumeric}  = -1 % No limit
             end
 
-            assert(self.ui8PolyDeg > 2, 'Error: selected degree is too low!')
+            assert(self.ui8PolyDeg >= 2, 'ERROR: selected degree is too low!')
             dPolyTermsValues = coder.nullcopy(zeros(self.ui8PolyDeg + 1, 1, 'double'));
 
             % Initialize recursion
@@ -163,7 +163,7 @@ classdef CChbvInterpolator < CInterpolator
             assert(not(isempty(self.dScaledInterpDomain)));
 
             assert(size(dDataMatrix, 2) == length(self.dInterpDomain));
-            assert(self.ui8PolyDeg > 2);
+            assert(self.ui8PolyDeg >= 2);
 
             % Get size of the output vector
             i32OutputSizeFromData = int32(size(dDataMatrix, 1));
@@ -171,7 +171,8 @@ classdef CChbvInterpolator < CInterpolator
             if self.i32OutputVectorSize == -1
                 self.i32OutputVectorSize = i32OutputSizeFromData;
             else
-                assert(self.i32OutputVectorSize == i32OutputSizeFromData, 'ERROR: output size of data matrix (dim0) does NOT match output size set at instantiation.')
+                assert(self.i32OutputVectorSize == i32OutputSizeFromData, ...
+                    'ERROR: output size of data matrix (dim0) does NOT match output size set at instantiation.')
             end
 
             % Allocate output matrix
@@ -205,7 +206,7 @@ classdef CChbvInterpolator < CInterpolator
             strFitStats = struct();
 
             % Perform automatic fitting check if requested
-            if self.bENABLE_AUTO_CHECK
+            if self.bEnableAutoFitCheck
                 [self, strFitStats] = self.checkFitPoly(self.dInterpDomain, dDataMatrix);
             end
 

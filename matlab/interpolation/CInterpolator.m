@@ -23,7 +23,7 @@ classdef (Abstract) CInterpolator < handle
 
         % Settings
         enumInterpType;
-        bENABLE_AUTO_CHECK;
+        bEnableAutoFitCheck;
         ui8PolyDeg;
         
         % Data
@@ -47,24 +47,29 @@ classdef (Abstract) CInterpolator < handle
 
     methods (Access = public)
         %% CONSTRUCTOR
-        function self = CInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bENABLE_AUTO_CHECK, dDomainBounds, i32OutputVectorSize)
+        function self = CInterpolator(dInterpDomain, ...
+                                    ui8PolyDeg, ...
+                                    enumInterpType, ...
+                                    bEnableAutoFitCheck, ...
+                                    dDomainBounds, ...
+                                    i32OutputVectorSize)
             arguments
                 dInterpDomain (1,:) double {isnumeric, isvector}
                 ui8PolyDeg    (1,1) uint8 {isnumeric, isscalar} = 15
                 enumInterpType (1,1) {isa(enumInterpType, 'EnumInterpType')} = EnumInterpType.VECTOR
-                bENABLE_AUTO_CHECK (1,1) logical {islogical} = true
+                bEnableAutoFitCheck (1,1) logical {islogical} = true
                 dDomainBounds (1, 2) double {isnumeric, isvector} = zeros(1,2)
                 i32OutputVectorSize (1,1) int32 {isnumeric, isscalar} = -1 % Expected output size for checks
             end
             
-            assert(ui8PolyDeg > 1, 'Interpolant degree must be > 1.')
+            assert(ui8PolyDeg > 1, "MATLAB:assert:failed", 'Interpolant degree must be > 1.')
             assert(length(dInterpDomain) > ui8PolyDeg, 'Size of interpolation domanin and data must be greater than the requested ui8PolyDeg.')
 
             % Save class data members
             self.enumInterpType = enumInterpType;
             self.ui8PolyDeg    = ui8PolyDeg;
             self.dInterpDomain = dInterpDomain;
-            self.bENABLE_AUTO_CHECK = bENABLE_AUTO_CHECK;
+            self.bEnableAutoFitCheck = bEnableAutoFitCheck;
             self.i32OutputVectorSize = i32OutputVectorSize;
             
             if i32OutputVectorSize == -1
@@ -175,7 +180,7 @@ classdef (Abstract) CInterpolator < handle
             arguments
                 self,
                 dEvalDomain (1,:) double {isnumeric}
-                dDataMatrix   (:,:) double {ismatrix, isnumeric}
+                dDataMatrix (:,:) double {ismatrix, isnumeric}
             end
             
             % HARDCODED OPTIONS
