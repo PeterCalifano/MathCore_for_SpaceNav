@@ -88,13 +88,16 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
             % Select implementation of step
             switch enumMethod
                 case 'lie_euler'
-                    dQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_LieGroupEuler(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
+                    fcnQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_LieGroupEuler(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
 
                 case 'rkmk4'
-                    dQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_RKMK4(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
+                    fcnQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_RKMK4(dQuatOut, ...
+                                                                                                                dOmegaAngVel, ...
+                                                                                                                dTstamp, ...
+                                                                                                                dTmpStep);
 
                 case 'rk4'
-                    dQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_RK4(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
+                    fcnQuatIntegr = @(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep) CQuatKinematicsIntegrator.IntegrStep_RK4(dQuatOut, dOmegaAngVel, dTstamp, dTmpStep);
 
             end
 
@@ -132,7 +135,7 @@ classdef CQuatKinematicsIntegrator < handle & matlab.mixin.Copyable
                     dTmpDeltaStep = min(dDeltaT_, dTimegrid(ui32CurrentIntegrStepIdx) - dInternalLoopTime_);
                     
                     % Integrate over dTmpDeltaStep time
-                    dTmpQuatOut = dQuatIntegr(dTmpQuatOut, varOmegaAngVel_, dCurrentTime, dTmpDeltaStep);
+                    dTmpQuatOut = fcnQuatIntegr(dTmpQuatOut, varOmegaAngVel_, dCurrentTime, dTmpDeltaStep);
 
                     dInternalLoopTime_ = dInternalLoopTime_ + dTmpDeltaStep;
                     dAccumStepTime = dAccumStepTime + dTmpDeltaStep;
