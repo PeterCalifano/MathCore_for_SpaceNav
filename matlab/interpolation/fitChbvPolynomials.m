@@ -28,21 +28,22 @@ end
 % degree. The scaling to [-1,1] domain is automatically handled.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% i_ui8PolyDeg
-% i_dInterpDomain
-% i_dDataMatrix
-% i_dDomainLB
-% i_dDomainUB
-% i_bENABLE_AUTO_CHECK
+% ui8PolyDeg
+% dInterpDomain
+% dDataMatrix
+% dDomainLB
+% dDomainUB
+% bENABLE_AUTCHECK
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% o_dChbvCoeffs
-% o_dScaledInterpDomain
-% o_strfitStats
+% dChbvCoeffs
+% dScaledInterpDomain
+% strfitStats
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 07-04-2024        Pietro Califano         First version. Validated.
 % 08-05-2024        Pietro Califano         Updated with error checks.
+% 18-07-2025        Pietro Califano     Fix basis and fitting problem errors
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
@@ -57,19 +58,17 @@ if nargin < 6
 end
 
 % Check input dimensions
-% i_dDataMatrix: [L, N] where N is the number of points, L is the output vector size
+% dDataMatrix: [L, N] where N is the number of points, L is the output vector size
 assert(size(dDataMatrix, 2) == length(dInterpDomain));
-assert(ui32PolyDeg > 2);
+assert(ui32PolyDeg >= 2);
 
-
-assert(length(dInterpDomain) >= ui32PolyDeg +1);
+assert(length(dInterpDomain) >= ui32PolyDeg+1);
 
 % Get size of the output vector
 ui8OutputSize = size(dDataMatrix, 1);
 
 % Allocate output matrix
-dChbvCoeffs = zeros(ui8OutputSize*(ui32PolyDeg), 1);
-
+dChbvCoeffs = zeros(ui8OutputSize*(ui32PolyDeg+1), 1);
 
 if nargin < 3
     dDomainUB = max(dInterpDomain, [], 'all');
@@ -80,13 +79,13 @@ end
 dScaledInterpDomain = (2.*dInterpDomain - (dDomainUB+dDomainLB))./(dDomainUB-dDomainLB);
 
 % Compute regressors matrix on scaled domain
-dRegrMatrix = zeros(ui32PolyDeg, size(dDataMatrix, 2));
+dRegrMatrix = zeros(ui32PolyDeg+1, size(dDataMatrix, 2));
 
 for idN = 1:size(dDataMatrix, 2)
 
     % Evaluate Chebyshev polynomial at scaled point
-    tmpChbvPoly = EvalRecursiveChbv(ui32PolyDeg, dScaledInterpDomain(idN));
-    dRegrMatrix(:, idN) = tmpChbvPoly(2:end);
+    dTmpChbvPoly = EvalRecursiveChbv(ui32PolyDeg, dScaledInterpDomain(idN));
+    dRegrMatrix(:, idN) = dTmpChbvPoly;
     
 end
 

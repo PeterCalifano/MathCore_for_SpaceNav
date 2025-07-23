@@ -24,6 +24,7 @@ end
 %% CHANGELOG
 % 05-04-2024    Pietro Califano         First version. Validated.
 % 01-02-2025    Pietro Califano         Function modified for compatibility with static size requirements
+% 18-07-2025    Pietro Califano     Fix basis and fitting problem errors
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
@@ -33,12 +34,12 @@ end
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
 
-assert(ui32PolyDeg > 2, 'Error: selected degree is too low!')
+assert(ui32PolyDeg >= 2, 'Error: selected degree is too low!')
 dChbvPolynomial = zeros(ui32PolyMaxDeg + 1, 1);
 
 % Initialize recursion
-dChbvPolynomial(1) = 0.0;
-dChbvPolynomial(2) = 1.0;
+dChbvPolynomial(1) = 1.0;
+dChbvPolynomial(2) = dScaledPoint;
 
 for idN = 3:ui32PolyDeg + 1
     dChbvPolynomial(idN) = 2.0 * dScaledPoint * dChbvPolynomial(idN-1) - dChbvPolynomial(idN-2);

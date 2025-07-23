@@ -18,13 +18,13 @@ arguments
 end
 %% PROTOTYPE
 % [dChbvInterpVector] = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ...
-%     ui32OutputSize, ...
-%     dEvalPoint, ...
-%     dChbvCoeffs, ...
-%     dSwitchIntervals, ...
-%     dDomainLB, ...
-%     dDomainUB,
-%     ui32PolyMaxDeg)
+%                                                       ui32OutputSize, ...
+%                                                       dEvalPoint, ...
+%                                                       dChbvCoeffs, ...
+%                                                       dSwitchIntervals, ...
+%                                                       dDomainLB, ...
+%                                                       dDomainUB,
+%                                                       ui32PolyMaxDeg)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
 % What the function does
@@ -43,18 +43,16 @@ end
 % dChbvInterpVector
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
-% 07-05-2024        Pietro Califano         First version, modified from general purpose utility. Validated.
+% 07-05-2024    Pietro Califano     First version, modified from general purpose utility. Validated.
+% 18-07-2025    Pietro Califano     Fix basis and fitting problem errors
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
-% [-]
-% -------------------------------------------------------------------------------------------------------------
-%% Future upgrades
 % [-]
 % -------------------------------------------------------------------------------------------------------------
 %% Function code
 
 % ui32PtrToLastCoeff = ui32PolyDeg * ui32OutputSize;
-assert(length(dChbvCoeffs) == ui32PolyMaxDeg*ui32OutputSize, ...
+assert(length(dChbvCoeffs) == (ui32PolyMaxDeg+1)*ui32OutputSize, ...
     'Number of coefficients does not match output vector size.')
 
 % Variables declaration
@@ -69,14 +67,15 @@ dChbvPolynomial(1:ui32PolyDeg+1) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint, 
 
 % Compute interpolated output value by inner product with coefficients matrix
 dChbvInterpVector(1:ui32OutputSize) = transpose( reshape(dChbvCoeffs,...
-                                         ui32PolyDeg, ui32OutputSize) ) * dChbvPolynomial(2:ui32PolyDeg+1);
+                                         ui32PolyDeg+1, ui32OutputSize) ) * dChbvPolynomial;
 
+% DEVNOTE: not needed
 % Switch sign of the interpolated value if required
 % Check if within "switch intervals
-for idCheck = 1:size(dSwitchIntervals, 1) % TODO verify if this is allowed or iterable must be fixed
-    if dEvalPoint >= dSwitchIntervals(idCheck, 1) && dEvalPoint < dSwitchIntervals(idCheck, 2)
-        dChbvInterpVector(1:ui32OutputSize) = - dChbvInterpVector(1:ui32OutputSize);
-    end
-end
+% for idCheck = 1:size(dSwitchIntervals, 1) % TODO verify if this is allowed or iterable must be fixed
+%     if dEvalPoint >= dSwitchIntervals(idCheck, 1) && dEvalPoint < dSwitchIntervals(idCheck, 2)
+%         dChbvInterpVector(1:ui32OutputSize) = - dChbvInterpVector(1:ui32OutputSize);
+%     end
+% end
 
 end

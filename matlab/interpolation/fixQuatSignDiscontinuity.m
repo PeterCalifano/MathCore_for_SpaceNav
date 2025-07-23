@@ -23,6 +23,7 @@ end
 % 02-05-2024        Pietro Califano         Adapted from testChebyshevInterpolation script.
 % 07-12-2024        Pietro Califano         Major bug fix in discontinuity detection (last occurrence was
 %                                           being fixed incorrectly in some cases)
+% 18-07-2025        Pietro Califano         Improve robustness of sign switch detection
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % [-]
@@ -33,9 +34,9 @@ end
 %% Function code
 
 % Sign discontinuity detector and fix (ATTITUDE QUATERNION ONLY)
-bsignSwitchDetectionMask = sign(dQuat_fromAtoB(:, 1:3));
-bsignSwitchDetectionMask = all( ischange(bsignSwitchDetectionMask), 2);
-ui8howManySwitches = sum(bsignSwitchDetectionMask == true);
+bsignSwitchDetectionMask = sign(dQuat_fromAtoB(:, 1:4)); % Use first component as sign check
+bsignSwitchDetectionMask = any( ischange(bsignSwitchDetectionMask), 2);
+ui8howManySwitches = uint8(sum(bsignSwitchDetectionMask == true));
 interpSignal = dQuat_fromAtoB;
 bIsSignSwitched = false(size(dQuat_fromAtoB, 2), 1);
 
@@ -50,13 +51,13 @@ if ui8howManySwitches > 0
         idStart = switchIdx(idToFix);
 
         if (idToFix == startIntervalsIDs(end) && length(startIntervalsIDs) > 1) ...
-                && mod(ui8howManySwitches, 2) ~= 0 || ...
+                && mod(double(ui8howManySwitches), 2) ~= 0 || ...
                 length(switchIdx) == 1
 
             idEnd = length(interpSignal);
 
         elseif (idToFix == startIntervalsIDs(end) && length(startIntervalsIDs) > 1) ...
-                && mod(ui8howManySwitches, 2) == 0 
+                && mod(double(ui8howManySwitches), 2) == 0 
 
             idEnd = switchIdx(end)-1;
             

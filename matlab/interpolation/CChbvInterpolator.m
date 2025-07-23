@@ -30,19 +30,19 @@ classdef CChbvInterpolator < CInterpolator
 
     methods (Access = public)
         %% CONSTRUCTOR
-        function self = CChbvInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bENABLE_AUTO_CHECK, dDomainBounds, i32OutputVectorSize, bUSE_MEX)
+        function self = CChbvInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bEnableAutoFitCheck, dDomainBounds, i32OutputVectorSize, bUSE_MEX)
             arguments
                 dInterpDomain (1,:) double {isnumeric, isvector}
                 ui8PolyDeg    (1,1) uint8 {isnumeric, isscalar} = 15
                 enumInterpType (1,1) {isa(enumInterpType, 'EnumInterpType')} = EnumInterpType.VECTOR
-                bENABLE_AUTO_CHECK (1,1) logical {islogical} = true
+                bEnableAutoFitCheck (1,1) logical {islogical} = true
                 dDomainBounds (1, 2) double {isnumeric, isvector} = zeros(1,2)
                 i32OutputVectorSize (1,1) int32 {isnumeric, isscalar} = -1 % Expected output size for checks
                 bUSE_MEX            (1,1) logical {islogical} = false;
             end
 
             % Instantiate base class
-            self = self@CInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bENABLE_AUTO_CHECK, dDomainBounds, i32OutputVectorSize);
+            self = self@CInterpolator(dInterpDomain, ui8PolyDeg, enumInterpType, bEnableAutoFitCheck, dDomainBounds, i32OutputVectorSize);
             
             % Compute scaled domain
             self.dScaledInterpDomain = (2.*self.dInterpDomain - (self.dDomainBounds(2) + self.dDomainBounds(1)) )./(self.dDomainBounds(2) - self.dDomainBounds(1));
@@ -73,10 +73,10 @@ classdef CChbvInterpolator < CInterpolator
             % TODO: adapt from evalAttQuatChbvPolyWithCoeffs and evalChbvPolyWithCoeffs
             % Sanity checks
 
-            bIS_ATT_QUAT = false;
-            if self.enumInterpType == EnumInterpType.QUAT
-                bIS_ATT_QUAT = true;
-            end
+            % bIS_ATT_QUAT = false;
+            % if self.enumInterpType == EnumInterpType.QUAT
+            %     bIS_ATT_QUAT = true;
+            % end
 
             % Variables declaration
             dChbvPolynomial = coder.nullcopy(zeros(self.ui8PolyDeg+1, 1));
@@ -95,27 +95,29 @@ classdef CChbvInterpolator < CInterpolator
 
             % Compute interpolated output value by inner product with coefficients matrix
             dInterpVector(:) = transpose( reshape(self.dInterpCoeffsBuffer,...
-                self.ui8PolyDeg, self.i32OutputVectorSize) ) * dChbvPolynomial(2:end);
+                self.ui8PolyDeg + 1, self.i32OutputVectorSize) ) * dChbvPolynomial;
 
+            % DEVNOTE: Not needed. Sign switch does not matter at evaluation time (does not change the
+            % corresponding attitude value, since it results from the quaternion double cover).
             % Switch sign of the interpolated value if required
             % Check if within "switch intervals
-            if bIS_ATT_QUAT == true
-                assert(not(isempty(self.dSwitchIntervals)))
-
-                if bApplyScaling == false
-                    % Perform unscaling to be consistent with switch intervals (TBC TEST)
-                    dEvalPointCheck = ( (self.dDomainBounds(2) - self.dDomainBounds(1)) * dEvalPoint + (self.dDomainBounds(1) + self.dDomainBounds(2)) ) / 2; 
-                else
-                    dEvalPointCheck = dEvalPoint;
-                end
-
-                for idCheck = 1:size(self.dSwitchIntervals, 1)
-                    
-                    if dEvalPointCheck >= self.dSwitchIntervals(idCheck, 1) && dEvalPointCheck < self.dSwitchIntervals(idCheck, 2)
-                        dInterpVector(:) = - dInterpVector(:);
-                    end
-                end
-            end
+            % if bIS_ATT_QUAT == true
+            %     assert(not(isempty(self.dSwitchIntervals)))
+            % 
+            %     if bApplyScaling == false
+            %         % Perform unscaling to be consistent with switch intervals (TBC TEST)
+            %         dEvalPointCheck = ( (self.dDomainBounds(2) - self.dDomainBounds(1)) * dEvalPoint + (self.dDomainBounds(1) + self.dDomainBounds(2)) ) / 2; 
+            %     else
+            %         dEvalPointCheck = dEvalPoint;
+            %     end
+            % 
+            %     for idCheck = 1:size(self.dSwitchIntervals, 1)
+            % 
+            %         if dEvalPointCheck >= self.dSwitchIntervals(idCheck, 1) && dEvalPointCheck < self.dSwitchIntervals(idCheck, 2)
+            %             dInterpVector(:) = - dInterpVector(:);
+            %         end
+            %     end
+            % end
 
         end
 
@@ -128,12 +130,8 @@ classdef CChbvInterpolator < CInterpolator
                 i32LimitDegree (1,1) int32 {isscalar, isnumeric}  = -1 % No limit
             end
 
-            assert(self.ui8PolyDeg > 2, 'Error: selected degree is too low!')
+            assert(self.ui8PolyDeg >= 2, 'ERROR: selected degree is too low!')
             dPolyTermsValues = coder.nullcopy(zeros(self.ui8PolyDeg + 1, 1, 'double'));
-
-            % Initialize recursion
-            dPolyTermsValues(1) = 0.0;
-            dPolyTermsValues(2) = 1.0;
 
             if bApplyScaling == true
                 dScaledPoint = (2 * dEvalPoint - (self.dDomainBounds(1) + self.dDomainBounds(2))) / ...
@@ -141,6 +139,10 @@ classdef CChbvInterpolator < CInterpolator
             else
                 dScaledPoint = dEvalPoint;
             end
+
+            % Initialize recursion
+            dPolyTermsValues(1) = 1.0;
+            dPolyTermsValues(2) = dScaledPoint;
 
             for idN = 3:self.ui8PolyDeg + 1
                 dPolyTermsValues(idN) = 2.0 * dScaledPoint * dPolyTermsValues(idN-1) - dPolyTermsValues(idN-2);
@@ -163,7 +165,7 @@ classdef CChbvInterpolator < CInterpolator
             assert(not(isempty(self.dScaledInterpDomain)));
 
             assert(size(dDataMatrix, 2) == length(self.dInterpDomain));
-            assert(self.ui8PolyDeg > 2);
+            assert(self.ui8PolyDeg >= 2);
 
             % Get size of the output vector
             i32OutputSizeFromData = int32(size(dDataMatrix, 1));
@@ -171,11 +173,12 @@ classdef CChbvInterpolator < CInterpolator
             if self.i32OutputVectorSize == -1
                 self.i32OutputVectorSize = i32OutputSizeFromData;
             else
-                assert(self.i32OutputVectorSize == i32OutputSizeFromData, 'ERROR: output size of data matrix (dim0) does NOT match output size set at instantiation.')
+                assert(self.i32OutputVectorSize == i32OutputSizeFromData, ...
+                    'ERROR: output size of data matrix (dim0) does NOT match output size set at instantiation.')
             end
 
             % Allocate output matrix
-            self.dInterpCoeffsBuffer = zeros(self.i32OutputVectorSize*int32((self.ui8PolyDeg)), 1);
+            self.dInterpCoeffsBuffer = zeros(self.i32OutputVectorSize*int32((self.ui8PolyDeg+1)), 1);
 
             % Call data matrix fix if QUAT type
             if self.enumInterpType == EnumInterpType.QUAT
@@ -183,13 +186,13 @@ classdef CChbvInterpolator < CInterpolator
             end
 
             % Compute regressors matrix on scaled domain
-            dRegrMatrix = zeros(self.ui8PolyDeg, size(dDataMatrix, 2));
+            dRegrMatrix = zeros(self.ui8PolyDeg + 1, size(dDataMatrix, 2));
 
             for idN = 1:size(dDataMatrix, 2)
 
                 % Evaluate Chebyshev polynomial at scaled point
                 [self, dTmpChbvPoly] = self.evalPoly(self.dScaledInterpDomain(idN));
-                dRegrMatrix(:, idN) = dTmpChbvPoly(2:end);
+                dRegrMatrix(:, idN) = dTmpChbvPoly;
 
             end
 
@@ -205,7 +208,7 @@ classdef CChbvInterpolator < CInterpolator
             strFitStats = struct();
 
             % Perform automatic fitting check if requested
-            if self.bENABLE_AUTO_CHECK
+            if self.bEnableAutoFitCheck
                 [self, strFitStats] = self.checkFitPoly(self.dInterpDomain, dDataMatrix);
             end
 
