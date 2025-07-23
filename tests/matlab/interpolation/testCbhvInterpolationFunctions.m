@@ -23,7 +23,8 @@ classdef testCbhvInterpolationFunctions < matlab.unittest.TestCase
             restoredefaultpath;
 
             % Add the folder you want to test (plus subs if needed)
-            charSrcPath = "/home/peterc/devDir/MathCore_for_SpaceNav";
+            charThisFilePath = fileparts(mfilename("fullpath"));
+            charSrcPath = fullfile(charThisFilePath, '..', '..', '..','matlab');
             addpath(genpath(charSrcPath), '-begin');             % or addpath(genpath(p), '-begin');
             testCase.addTeardown(@() teardownPath(testCase));
         end
