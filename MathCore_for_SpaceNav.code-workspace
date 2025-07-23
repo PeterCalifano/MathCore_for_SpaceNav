@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../EstimationGears_for_SpaceNav"
+		},
+		{
+			"path": "../dev-tools/UnitTesting4MATLAB"
 		}
 	],
 	"settings": {}

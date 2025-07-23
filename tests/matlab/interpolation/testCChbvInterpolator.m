@@ -4,7 +4,7 @@ classdef testCChbvInterpolator < matlab.unittest.TestCase
         charPathFile    
     end
 
-    methods (TestMethodSetup)
+    methods (TestClassSetup)
         function setupPath(testCase)
             % Save current path (memory + file, if you want a record)
             testCase.charSavedPath = path;
