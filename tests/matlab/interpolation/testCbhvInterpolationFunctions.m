@@ -7,6 +7,44 @@ classdef testCbhvInterpolationFunctions < matlab.unittest.TestCase
     % 18-07-2025   Claude Sonnet 4, Pietro Califano   Comprehensive test suite for Chebyshev interpolation functions
     % -------------------------------------------------------------------------------------------------------------
     
+    properties (Access = private)
+        charSavedPath   % char vector of original path
+        charPathFile
+    end
+
+    methods (TestMethodSetup)
+        function setupPath(testCase)
+            % Save current path (memory + file, if you want a record)
+            testCase.charSavedPath = path;
+            testCase.charPathFile  = fullfile(fileparts(mfilename("fullpath")), 'path_before_tests.mat');
+            charOrigPath = testCase.charSavedPath;
+            save(testCase.charPathFile, 'charOrigPath');
+
+            restoredefaultpath;
+
+            % Add the folder you want to test (plus subs if needed)
+            charSrcPath = "/home/peterc/devDir/MathCore_for_SpaceNav";
+            addpath(genpath(charSrcPath), '-begin');             % or addpath(genpath(p), '-begin');
+            testCase.addTeardown(@() teardownPath(testCase));
+        end
+    end
+
+    methods (Access = private)
+        function teardownPath(testCase)
+            % Restore original path
+            if ~isempty(testCase.charSavedPath)
+                path(testCase.charSavedPath);
+            end
+
+            % Clean up temp file
+            if ~isempty(testCase.charPathFile) && isfile(testCase.charPathFile)
+                delete(testCase.charPathFile);
+            end
+        end
+    end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%% TEST
     methods (Test)
         
         function testFitChbvPolynomialsConstant(testCase)
