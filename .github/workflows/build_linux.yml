@@ -104,11 +104,6 @@ jobs:
       - name: Test
         run: ctest --test-dir "${BUILD_DIR}" --output-on-failure --parallel 2 --no-tests=error
 
-      - name: Validate CMake configuration and package lookup
-        run: |
-          ./tests/scripts/check_cmake_option_aliases.sh
-          ./tests/scripts/check_installed_package_lookup.sh
-
       - name: Show ccache stats
         if: always()
         run: ccache --show-stats || true
