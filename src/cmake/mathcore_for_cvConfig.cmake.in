@@ -4,4 +4,9 @@ include(CMakeFindDependencyMacro)
 
 find_dependency(Eigen3 3.4)
 
+# Resolve the dependency recorded in the installed compile interface.
+if(@ENABLE_TBB@)
+  find_dependency(TBB COMPONENTS tbb)
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Target.cmake")
