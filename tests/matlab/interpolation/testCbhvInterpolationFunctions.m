@@ -5,6 +5,7 @@ classdef testCbhvInterpolationFunctions < matlab.unittest.TestCase
     % -------------------------------------------------------------------------------------------------------------
     %% CHANGELOG
     % 18-07-2025   Claude Sonnet 4, Pietro Califano   Comprehensive test suite for Chebyshev interpolation functions
+    % 11-09-2026  Pietro Califano, Codex gpt-6    Remove unused runtime sign-switch metadata.
     % -------------------------------------------------------------------------------------------------------------
     
     properties (Access = private)
@@ -223,14 +224,14 @@ classdef testCbhvInterpolationFunctions < matlab.unittest.TestCase
             dDomainUB = 1;
             
             % Fit quaternion polynomials
-            [dChbvCoeffs, ~, dSwitchIntervals, ~, ~] = ...
+            [dChbvCoeffs] = ...
                 fitAttQuatChbvPolynmials(ui32PolyDeg, t, dQuatSequence', ...
                                        dDomainLB, dDomainUB, false, ui32PolyDeg);
             
             % Test evaluation
             testPoint = 0.5;
             dInterpQuat = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, uint32(4), ...
-                testPoint, dChbvCoeffs, dSwitchIntervals, dDomainLB, dDomainUB, ui32PolyDeg);
+                testPoint, dChbvCoeffs, dDomainLB, dDomainUB, ui32PolyDeg);
             
             % Verify quaternion properties
             testCase.verifySize(dInterpQuat, [4, 1]);

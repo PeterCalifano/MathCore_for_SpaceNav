@@ -1,85 +1,50 @@
-function [dChbvInterpVector] = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ...
-                                                        ui32OutputSize, ...
-                                                        dEvalPoint, ...
-                                                        dChbvCoeffs, ...
-                                                        dSwitchIntervals, ...
-                                                        dDomainLB, ...
-                                                        dDomainUB, ...
-                                                        ui32PolyMaxDeg) %#codegen
-arguments
-    ui32PolyDeg         (1, 1) uint32   % {isscalar, mustBeNumeric} % Commented for speed-up
-    ui32OutputSize      (1, 1) uint32   % {isscalar, mustBeNumeric}
-    dEvalPoint          (1, 1) double   % {isscalar, mustBeNumeric}
-    dChbvCoeffs         (:, 1) double   % {mustBeNumeric, ismatrix}
-    dSwitchIntervals    (:, 2) double   % {mustBeNumeric, ismatrix}
-    dDomainLB           (1, 1) double   % {isscalar, mustBeNumeric}
-    dDomainUB           (1, 1) double   % {isscalar, mustBeNumeric}
-    ui32PolyMaxDeg      (1, 1) uint32   = ui32PolyDeg % {isscalar, mustBeNumeric} 
-end
-%% PROTOTYPE
-% [dChbvInterpVector] = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ...
-%                                                       ui32OutputSize, ...
-%                                                       dEvalPoint, ...
-%                                                       dChbvCoeffs, ...
-%                                                       dSwitchIntervals, ...
-%                                                       dDomainLB, ...
-%                                                       dDomainUB,
-%                                                       ui32PolyMaxDeg)
+function dChbvInterpVector = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ui32OutputSize, ...
+    dEvalPoint, dChbvCoeffs, dDomainLB, dDomainUB, ui32PolyMaxDeg) %#codegen
+%% SIGNATURE
+% dChbvInterpVector = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ui32OutputSize, ...
+%     dEvalPoint, dChbvCoeffs, dDomainLB, dDomainUB, ui32PolyMaxDeg)
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% What the function does
+% Evaluate quaternion component series with a runtime degree within fixed capacity.
+% Pack the degree+1 active coefficients of each component consecutively, followed by unused
+% storage. Reuse the vector evaluator's bounds checks and allocation. The output is not normalized.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
-% ui32PolyDeg         (1, 1) uint32   % {isscalar, mustBeNumeric} % Commented for speed-up
-% ui32OutputSize      (1, 1) uint32   % {isscalar, mustBeNumeric}
-% dEvalPoint          (1, 1) double   % {isscalar, mustBeNumeric}
-% dChbvCoeffs         (:, 1) double   % {mustBeNumeric, ismatrix}
-% dSwitchIntervals    (:, 2) double   % {mustBeNumeric, ismatrix}
-% dDomainLB           (1, 1) double   % {isscalar, mustBeNumeric}
-% dDomainUB           (1, 1) double   % {isscalar, mustBeNumeric}
-% ui32PolyMaxDeg      (1, 1) uint32   = ui32PolyDeg % {isscalar, mustBeNumeric}
+% ui32PolyDeg       Runtime active degree, at least 2 and no greater than ui32PolyMaxDeg.
+% ui32OutputSize    Component count; normally 4 for quaternions. Constant for static codegen.
+% dEvalPoint        Evaluation time in [dDomainLB,dDomainUB].
+% dChbvCoeffs       Packed active coefficients, optionally followed by unused capacity.
+% dDomainLB        Lower interpolation bound.
+% dDomainUB        Upper interpolation bound, strictly greater than dDomainLB.
+% ui32PolyMaxDeg   Fixed workspace degree bound; defaults to the active degree.
 % -------------------------------------------------------------------------------------------------------------
 %% OUTPUT
-% dChbvInterpVector
+% dChbvInterpVector Interpolated components without normalization or a sign change.
 % -------------------------------------------------------------------------------------------------------------
 %% CHANGELOG
 % 07-05-2024    Pietro Califano     First version, modified from general purpose utility. Validated.
-% 18-07-2025    Pietro Califano     Fix basis and fitting problem errors
+% 18-07-2025    Pietro Califano     Fix basis and fitting problem errors.
+% 10-09-2026    Pietro Califano, Codex gpt-6    Reuse vector evaluation for runtime quaternion degrees.
+% 11-09-2026  Pietro Califano, Codex gpt-6    Remove unused runtime sign-switch metadata.
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
-% [-]
+% evalChbvPolyWithCoeffs.
 % -------------------------------------------------------------------------------------------------------------
-%% Function code
-
-if coder.target('MATLAB') || coder.target('MEX')
-    assert(dEvalPoint >= dDomainLB && dEvalPoint <= dDomainUB, 'ERROR: invalid evaluation point. Out of interpolation bound.');
+arguments (Input)
+    ui32PolyDeg      (1, 1) uint32
+    ui32OutputSize   (1, 1) uint32
+    dEvalPoint       (1, 1) double
+    dChbvCoeffs      (:, 1) double
+    dDomainLB        (1, 1) double
+    dDomainUB        (1, 1) double
+    ui32PolyMaxDeg   (1, 1) uint32 {coder.mustBeConst} = ui32PolyDeg
+end
+arguments (Output)
+    dChbvInterpVector (:, 1) double
 end
 
-% ui32PtrToLastCoeff = ui32PolyDeg * ui32OutputSize;
-assert(length(dChbvCoeffs) == (ui32PolyMaxDeg+1)*ui32OutputSize, ...
-    'Number of coefficients does not match output vector size.')
-
-% Variables declaration
-dChbvPolynomial     = zeros(ui32PolyMaxDeg + 1, 1);
-dChbvInterpVector   = zeros(ui32OutputSize, 1);
-
-% Compute scaled evaluation point
-dScaledPoint = (2 * dEvalPoint - (dDomainLB + dDomainUB)) / (dDomainUB - dDomainLB);
-
-% Get evaluated Chebyshev polynomials at scaled point
-dChbvPolynomial(1:ui32PolyDeg+1) = EvalRecursiveChbv(ui32PolyDeg, dScaledPoint, ui32PolyMaxDeg);
-
-% Compute interpolated output value by inner product with coefficients matrix
-dChbvInterpVector(1:ui32OutputSize) = transpose( reshape(dChbvCoeffs,...
-                                         ui32PolyDeg+1, ui32OutputSize) ) * dChbvPolynomial;
-
-% DEVNOTE: not needed
-% Switch sign of the interpolated value if required
-% Check if within "switch intervals
-% for idCheck = 1:size(dSwitchIntervals, 1) % TODO verify if this is allowed or iterable must be fixed
-%     if dEvalPoint >= dSwitchIntervals(idCheck, 1) && dEvalPoint < dSwitchIntervals(idCheck, 2)
-%         dChbvInterpVector(1:ui32OutputSize) = - dChbvInterpVector(1:ui32OutputSize);
-%     end
-% end
-
+% The shared evaluator reads only the packed active prefix, including for padded storage.
+ui32ActiveCoeffCount = ui32OutputSize * (ui32PolyDeg + 1);
+dChbvInterpVector = evalChbvPolyWithCoeffs(ui32PolyDeg, ui32OutputSize, dEvalPoint, ...
+    dChbvCoeffs, dDomainLB, dDomainUB, ui32ActiveCoeffCount, ui32PolyMaxDeg);
 end

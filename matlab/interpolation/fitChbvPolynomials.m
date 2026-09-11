@@ -53,6 +53,7 @@ end
 % 08-05-2024        Pietro Califano     Updated with error checks.
 % 18-07-2025        Pietro Califano     Fix basis and fitting problem errors
 % 06-08-2025        Pietro Califano     Update input options to set error tols
+% 11-09-2026  Pietro Califano, Codex gpt-6    Remove unused runtime sign-switch metadata.
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % checkFitChbvPoly() if check is enabled
@@ -103,7 +104,7 @@ dChbvCoeffs(1:end) = dChbvCoeffs_matrixT(:);
 
 if bENABLE_FIT_CHECK == true
         [strfitStats] = checkFitChbvPoly(ui32PolyDeg, dInterpDomain, dChbvCoeffs, ...
-            dDataMatrix, dDomainLB, dDomainUB, false, [], bEnableErrorThrow, dPercRelErrorTol);
+            dDataMatrix, dDomainLB, dDomainUB, false, bEnableErrorThrow, dPercRelErrorTol);
 else
     strfitStats = struct();
 end

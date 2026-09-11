@@ -43,7 +43,7 @@ end
 %% OUTPUT
 % dChbvCoeffs
 % dScaledInterpDomain
-% dswitchIntervals
+% dswitchIntervals    Sign-corrected sample-index intervals for fitting diagnostics only.
 % strfitStats
 % ui32PtrToLastCoeff
 % -------------------------------------------------------------------------------------------------------------
@@ -51,6 +51,7 @@ end
 % 08-05-2024        Pietro Califano     fitChbvPolynomials specification for Attitude quaternions, with error checks.
 % 01-02-2025        Pietro Califano     Minor changes for better compatibility with fncs of toolbox
 % 18-07-2025        Pietro Califano     Fix basis and fitting problem errors
+% 11-09-2026  Pietro Califano, Codex gpt-6    Remove unused runtime sign-switch metadata.
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % fixQuatSignDiscontinuity()
@@ -123,7 +124,7 @@ dChbvCoeffs(1:ui32PtrToLastCoeff) = dChbvCoeffs_matrixT(:);
 %% Automatic error check
 if bENABLE_FIT_CHECK == true
     [strfitStats] = checkFitChbvPoly(ui32PolyDeg, dInterpDomain, dChbvCoeffs, ...
-        dDataMatrix, dDomainLB, dDomainUB, true, dswitchIntervals, true);
+        dDataMatrix, dDomainLB, dDomainUB, true, true);
 else
     strfitStats = struct();
 end

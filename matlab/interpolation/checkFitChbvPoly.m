@@ -5,22 +5,9 @@ function [strFitStats, dChbvInterpVector] = checkFitChbvPoly(ui32PolyDeg, ...
                                                             dDomainLB, ...
                                                             dDomainUB, ...
                                                             bIS_ATT_QUAT, ...
-                                                            dSwitchIntervals, ...
                                                             bEnableErrorThrow, ...
                                                             dPercRelErrorTol) %#codegen
-arguments
-    ui32PolyDeg         (1,1) uint32
-    dInterpDomain       (:,1) double
-    dChbvCoeffs         (:,1) double
-    dDataMatrix         (:,:) double
-    dDomainLB           (1,1) double
-    dDomainUB           (1,1) double
-    bIS_ATT_QUAT        (1,1) logical
-    dSwitchIntervals    (:,:) double = []
-    bEnableErrorThrow   (1,1) logical = true
-    dPercRelErrorTol    (1,1) double {mustBeNumeric} = 0.1
-end
-%% PROTOTYPE
+%% SIGNATURE
 % [strfitStats, dChbvInterpVector] = checkFitChbvPoly(ui32PolyDeg, ...
 %                                                     dInterpDomain, ...
 %                                                     dChbvCoeffs, ...
@@ -28,14 +15,12 @@ end
 %                                                     dDomainLB, ...
 %                                                     dDomainUB, ...
 %                                                     bIS_ATT_QUAT, ...
-%                                                     dSwitchIntervals, ...
 %                                                     bEnableErrorThrow, ...
 %                                                     dPercRelErrorTol) %#codegen
 % -------------------------------------------------------------------------------------------------------------
 %% DESCRIPTION
-% Function performing fitting check for Chebyshev interpolation functions. It uses randomly picked input
-% sample points to perform verification that the interpolation has been fitted correctly. The function uses
-% the dot product to evaluate quaternions instead of subtraction.
+% Check a Chebyshev fit at sampled input nodes and both domain endpoints.
+% Compare quaternion series using a sign-invariant dot product.
 % -------------------------------------------------------------------------------------------------------------
 %% INPUT
 % ui32PolyDeg         (1, 1) uint32
@@ -45,7 +30,6 @@ end
 % dDomainLB           (1, 1) double
 % dDomainUB           (1, 1) double
 % bIS_ATT_QUAT        (1, 1) logical
-% dSwitchIntervals    (:, :) double = []
 % bEnableErrorThrow   (1,1) logical = true
 % dPercRelErrorTol    (1,1) double {mustBeNumeric} = 0.1
 % -------------------------------------------------------------------------------------------------------------
@@ -56,11 +40,29 @@ end
 %% CHANGELOG
 % 08-05-2024    Pietro Califano     Function adapted from testing script.
 % 06-08-2025    Pietro Califano     Add error tolerance check and error throwing
+% 10-09-2026  Pietro Califano, Codex gpt-6    Separate runtime attitude degree from fixed capacity.
+% 11-09-2026  Pietro Califano, Codex gpt-6    Remove unused runtime sign-switch metadata.
 % -------------------------------------------------------------------------------------------------------------
 %% DEPENDENCIES
 % evalAttQuatChbvPolyWithCoeffs()
 % evalChbvPolyWithCoeffs()
 % -------------------------------------------------------------------------------------------------------------
+
+arguments (Input)
+    ui32PolyDeg         (1,1) uint32
+    dInterpDomain       (:,1) double
+    dChbvCoeffs         (:,1) double
+    dDataMatrix         (:,:) double
+    dDomainLB           (1,1) double
+    dDomainUB           (1,1) double
+    bIS_ATT_QUAT        (1,1) logical
+    bEnableErrorThrow   (1,1) logical = true
+    dPercRelErrorTol    (1,1) double {mustBeNumeric} = 0.1
+end
+arguments (Output)
+    strFitStats (1,1) struct
+    dChbvInterpVector (:,:) double
+end
 
 %% Function code
 if bIS_ATT_QUAT == true
@@ -68,7 +70,6 @@ if bIS_ATT_QUAT == true
     assert( size(dDataMatrix, 1) == ui8OutputSize );
 else
     ui8OutputSize = size(dDataMatrix, 1);
-    dSwitchIntervals = [];
 end
 
 assert( size(dDataMatrix, 2) == length(dInterpDomain) );
@@ -93,8 +94,10 @@ for idP = 1:length(TestPoints_Time)
 
     if bIS_ATT_QUAT == true 
         tic
+        % Keep the workspace bound fixed while the active degree remains runtime data.
+        ui32AttMaxDegree = coder.const(uint32(floor(numel(dChbvCoeffs) / ui8OutputSize)) - 1);
         dChbvInterpVector(:, idP) = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, ui8OutputSize, ...
-            dEvalPoint, dChbvCoeffs, dSwitchIntervals, dDomainLB, dDomainUB);
+            dEvalPoint, dChbvCoeffs, dDomainLB, dDomainUB, ui32AttMaxDegree);
 
     else
         tic

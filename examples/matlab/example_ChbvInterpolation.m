@@ -1,3 +1,22 @@
+%% SIGNATURE
+% example_ChbvInterpolation
+% -------------------------------------------------------------------------------------------------------------
+%% DESCRIPTION
+% Fit and evaluate vector and continuous quaternion Chebyshev series.
+% -------------------------------------------------------------------------------------------------------------
+%% INPUT
+% None.
+% -------------------------------------------------------------------------------------------------------------
+%% OUTPUT
+% Example interpolation results and figures.
+% -------------------------------------------------------------------------------------------------------------
+%% CHANGELOG
+% 11-09-2026  Pietro Califano, Codex gpt-6    Remove unused runtime sign-switch metadata.
+% -------------------------------------------------------------------------------------------------------------
+%% DEPENDENCIES
+% fitChbvPolynomials, fitAttQuatChbvPolynmials, evalAttQuatChbvPolyWithCoeffs.
+% -------------------------------------------------------------------------------------------------------------
+
 close all
 clear
 clc
@@ -56,7 +75,7 @@ dDomainUB = 120; % [s] Dummy last timestamp
 dTimesInSeconds = dDomainUB * dTimes;
 
 % Fit quaternion polynomials
-[dChbvCoeffs, ~, dSwitchIntervals, ~, ~] = fitAttQuatChbvPolynmials(ui32PolyDeg, ...
+[dChbvCoeffs] = fitAttQuatChbvPolynmials(ui32PolyDeg, ...
                                                                 dTimesInSeconds, ...
                                                                 dQuatSequence', ...
                                                                 dDomainLB, ...
@@ -69,7 +88,6 @@ dTestTimestamp = dTimesInSeconds(5);
 dInterpQuat = evalAttQuatChbvPolyWithCoeffs(ui32PolyDeg, uint32(4), ...
                                             dTestTimestamp, ...
                                             dChbvCoeffs, ...
-                                            dSwitchIntervals, ...
                                             dDomainLB, ...
                                             dDomainUB, ...
                                             ui32PolyDeg);
